@@ -36,7 +36,7 @@ def check(nombre: str, condicion: bool, detalle: str = "") -> None:
 
 def test_caso_valido_pasa():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion de vinos vigente antes de que se enfrie la relacion",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion de vinos vigente antes de que se enfrie la relacion",
         "accion": "Llamada telefonica",
         "plazo": "8 dias",
         "justificacion": "Hace varios meses que no compra y suele responder bien a promociones de vinos",
@@ -62,7 +62,7 @@ def test_excede_limite_palabras_recomendacion():
 
 def test_excede_limite_palabras_accion():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion comercial.",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion comercial.",
         "accion": " ".join(["palabra"] * 15),
         "plazo": "8 dias",
         "justificacion": "Justificacion corta y valida para este cliente en particular.",
@@ -79,7 +79,7 @@ def test_justificacion_bajo_minimo_falla():
     # Rango [8, 16] desde 2026-08-14 (ver config.py): sin piso, el sistema
     # convergia a notas mas largas que EH2, densidad visual distinta.
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Cliente inactivo, ofrecerle promocion",  # 4 palabras
@@ -94,7 +94,7 @@ def test_justificacion_bajo_minimo_falla():
 
 def test_justificacion_sobre_maximo_falla():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": " ".join(["palabra"] * 17),
@@ -109,7 +109,7 @@ def test_justificacion_sobre_maximo_falla():
 
 def test_justificacion_dentro_de_rango_pasa():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": " ".join(["palabra"] * 12),  # dentro de [8, 16]
@@ -122,7 +122,7 @@ def test_accion_de_5_palabras_falla_limite_nuevo():
     # Limite bajado de 12 a 4 el 2026-08-14 (ver config.py): 'accion' debe
     # ser un canal, no una descripcion. 5 palabras ya es demasiado.
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamar por telefono al cliente",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -137,7 +137,7 @@ def test_accion_de_5_palabras_falla_limite_nuevo():
 
 def test_accion_de_4_palabras_pasa():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Correo de verificacion breve",  # 4 palabras, justo en el limite
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -163,7 +163,7 @@ def test_vinetas_prohibidas():
 
 def test_negrita_markdown_prohibida():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele **la promocion vigente de vinos** antes de que se enfrie la relacion.",
+        "recomendacion": "Llámalo esta semana y ofrecele **la promocion vigente de vinos** antes de que se enfrie la relacion.",
         "accion": "Llamar por telefono al cliente.",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
@@ -178,7 +178,7 @@ def test_negrita_markdown_prohibida():
 
 def test_emoji_prohibido():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos 🍷 antes de que se enfrie la relacion.",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos 🍷 antes de que se enfrie la relacion.",
         "accion": "Llamar por telefono al cliente.",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
@@ -209,7 +209,7 @@ def test_palabra_prohibida_optimizar():
 def test_palabra_prohibida_no_hace_falso_positivo_por_subcadena():
     # "clave" prohibida como palabra completa, no debe disparar en "declive"
     salida = {
-        "recomendacion": "Llamalo esta semana porque su interes esta en declive y podria responder bien a una promocion vigente",
+        "recomendacion": "Llámalo esta semana porque su interes esta en declive y podria responder bien a una promocion vigente",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -229,7 +229,7 @@ def test_citar_dias_del_perfil_ya_no_se_rechaza():
     # registro del humano en vez de acercarlo, y era ademas un eje de fuga
     # perfecto para el panel ciego. Ver validador.py docstring del modulo.
     salida = {
-        "recomendacion": "Llamalo porque lleva 159 dias sin comprar y podria interesarle la promocion vigente de vinos",
+        "recomendacion": "Llámalo porque lleva 159 dias sin comprar y podria interesarle la promocion vigente de vinos",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -246,7 +246,7 @@ def test_fuga_monto_exacto():
     # El monto SI se sigue bloqueando: ningun experto (EH1 ni EH2) lo cita
     # nunca en el corpus real, a diferencia de dias/frecuencia.
     salida = {
-        "recomendacion": "Llamalo esta semana, historicamente compro $1401 y podria interesarle la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana, historicamente compro $1401 y podria interesarle la promocion vigente de vinos",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -262,7 +262,7 @@ def test_fuga_monto_exacto():
 def test_plazo_con_numero_no_dispara_fuga():
     # El plazo SI puede tener numeros propios de la accion, no del perfil.
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion",
         "accion": "Llamada",
         "plazo": "15 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -277,7 +277,7 @@ def test_plazo_con_numero_no_dispara_fuga():
 
 def test_punto_final_es_rechazado():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos.",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos.",
         "accion": "Llamar por telefono y ofrecer la promocion vigente",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -293,7 +293,7 @@ def test_punto_final_es_rechazado():
 def test_plazo_vago_es_rechazado():
     # Reproduce el defecto real: "en las proximas semanas" no tiene numero.
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamar por telefono y ofrecer la promocion vigente",
         "plazo": "En las proximas semanas",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -309,7 +309,7 @@ def test_plazo_vago_es_rechazado():
 def test_plazo_lo_antes_posible_es_rechazado():
     # Reproduce el otro defecto real: "lo antes posible." (sin numero, con punto).
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamar por telefono y ofrecer la promocion vigente",
         "plazo": "Lo antes posible.",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -326,7 +326,7 @@ def test_plazo_lo_antes_posible_es_rechazado():
 
 def test_plazo_fuera_de_rango_es_rechazado():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamar por telefono y ofrecer la promocion vigente",
         "plazo": "2 dias",  # bajo el minimo de 3
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -349,7 +349,7 @@ def test_plazo_fuera_de_rango_es_rechazado():
 
 def test_plazo_1_mes_en_el_limite_pasa():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos",
         "accion": "Llamada",
         "plazo": "1 mes",  # 30 dias, justo en el limite superior
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -377,7 +377,7 @@ def test_palabra_prohibida_crucial():
 
 def test_palabra_prohibida_personalizado():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele productos personalizados de la linea de vinos",
+        "recomendacion": "Llámalo esta semana y ofrecele productos personalizados de la linea de vinos",
         "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
@@ -392,7 +392,7 @@ def test_palabra_prohibida_personalizado():
 
 def test_campo_faltante():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion.",
+        "recomendacion": "Llámalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion.",
         "accion": "Llamar por telefono al cliente.",
         "plazo": "8 dias",
         # falta 'justificacion'
