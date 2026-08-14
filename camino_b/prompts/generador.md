@@ -81,8 +81,12 @@ adjetivo).
 
 - `recomendacion`: maximo 25 palabras, una sola oracion, que hacer y por
   que.
-- `accion`: maximo 12 palabras, el canal/gesto concreto (ej. "llamar por
-  telefono y ofrecer la promocion vigente de vinos").
+- `accion`: entre 1 y 4 palabras. Es el CANAL o gesto, no una descripcion
+  de lo que se va a decir o hacer con el cliente. Formato esperado:
+  "Llamada", "Visita", "WhatsApp", "Correo de verificacion", "Visita y
+  llamada". NO uses una frase completa con verbo conjugado (nada de
+  "llamar por telefono y ofrecer la promocion vigente" -- eso va en
+  `recomendacion` o `justificacion`, no aqui).
 - `plazo`: numero + unidad temporal concreta, nada mas (ej. "8 dias", "2
   semanas", "1 mes"), entre 3 y 30 dias equivalentes. No es una oracion,
   no lleva punto final, no lleva palabras adicionales.

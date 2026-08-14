@@ -150,7 +150,12 @@ TOP_K_PROMOCIONES = 10
 # ---------------------------------------------------------------------------
 
 LIMITE_PALABRAS_RECOMENDACION = 25
-LIMITE_PALABRAS_ACCION = 12
+# Bajado de 12 a 4 el 2026-08-14: con 12, 'accion' se volvia una frase
+# descriptiva completa (7-9 palabras en la practica) mientras EH2 (base
+# humana de comparacion) lo escribe casi siempre como una sola palabra de
+# canal ("Llamada"). Esa diferencia de longitud era 100% separable entre
+# fuentes en el panel de evaluacion ciega -- ver prompts/generador.md.
+LIMITE_PALABRAS_ACCION = 4
 LIMITE_PALABRAS_JUSTIFICACION = 30
 
 # Palabras/frases prohibidas (tono "consultor" / "IA"), coincidencia

@@ -37,7 +37,7 @@ def check(nombre: str, condicion: bool, detalle: str = "") -> None:
 def test_caso_valido_pasa():
     salida = {
         "recomendacion": "Llamalo esta semana y ofrecele la promocion de vinos vigente antes de que se enfrie la relacion",
-        "accion": "Llamar por telefono y presentar la promocion vigente de vinos",
+        "accion": "Llamada telefonica",
         "plazo": "8 dias",
         "justificacion": "Hace varios meses que no compra y suele responder bien a promociones de vinos",
     }
@@ -69,10 +69,38 @@ def test_excede_limite_palabras_accion():
     }
     r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
     check(
-        "accion de 15 palabras falla por limite (12)",
+        "accion de 15 palabras falla por limite (4)",
         not r.valido and any("'accion'" in e and "limite" in e for e in r.errores),
         str(r.errores),
     )
+
+
+def test_accion_de_5_palabras_falla_limite_nuevo():
+    # Limite bajado de 12 a 4 el 2026-08-14 (ver config.py): 'accion' debe
+    # ser un canal, no una descripcion. 5 palabras ya es demasiado.
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamar por telefono al cliente",
+        "plazo": "8 dias",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "accion de 5 palabras falla por el nuevo limite de 4",
+        not r.valido and any("'accion'" in e and "limite" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_accion_de_4_palabras_pasa():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Correo de verificacion breve",  # 4 palabras, justo en el limite
+        "plazo": "8 dias",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check("accion de 4 palabras (limite inclusive) pasa", r.valido, str(r.errores))
 
 
 def test_vinetas_prohibidas():
@@ -139,7 +167,7 @@ def test_palabra_prohibida_no_hace_falso_positivo_por_subcadena():
     # "clave" prohibida como palabra completa, no debe disparar en "declive"
     salida = {
         "recomendacion": "Llamalo esta semana porque su interes esta en declive y podria responder bien a una promocion vigente",
-        "accion": "Llamar por telefono al cliente",
+        "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
@@ -185,7 +213,7 @@ def test_plazo_con_numero_no_dispara_fuga():
     # El plazo SI puede tener numeros propios de la accion, no del perfil.
     salida = {
         "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion",
-        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "accion": "Llamada",
         "plazo": "15 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
@@ -272,7 +300,7 @@ def test_plazo_fuera_de_rango_es_rechazado():
 def test_plazo_1_mes_en_el_limite_pasa():
     salida = {
         "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
-        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "accion": "Llamada",
         "plazo": "1 mes",  # 30 dias, justo en el limite superior
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
@@ -285,7 +313,7 @@ def test_palabra_prohibida_crucial():
     # "Es crucial contactar al cliente..." -- ningun vendedor escribe asi.
     salida = {
         "recomendacion": "Es crucial contactar al cliente para ofrecerle la promocion vigente de vinos",
-        "accion": "Llamar por telefono al cliente",
+        "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
@@ -300,7 +328,7 @@ def test_palabra_prohibida_crucial():
 def test_palabra_prohibida_personalizado():
     salida = {
         "recomendacion": "Llamalo esta semana y ofrecele productos personalizados de la linea de vinos",
-        "accion": "Llamar por telefono al cliente",
+        "accion": "Llamada",
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
