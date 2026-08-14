@@ -14,11 +14,17 @@ casos_15_expertos.csv ni PRIVADO_mapa_id.csv; esos nombres no aparecen en
 ninguna ruta de codigo de este archivo.
 
 Uso:
-    python pipeline.py
+    python pipeline.py                  # los 15 casos, corrida completa
+    python pipeline.py --casos 1,2      # solo id_caso 1 y 2 (piloto de formato)
+
+Con --casos, las salidas se escriben en un subdirectorio propio dentro de
+resultados/ (p.ej. resultados/piloto_casos_1_2/) para no pisar ni
+mezclarse con los archivos de la corrida completa de los 15.
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from datetime import datetime, timezone
@@ -149,7 +155,21 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
     return traza, fila_csv, entrada_log
 
 
+def _parsear_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--casos",
+        type=str,
+        default=None,
+        help="Lista separada por comas de id_caso a procesar (p.ej. '1,2'). "
+        "Si se omite, procesa los 15 casos completos.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = _parsear_args()
+
     # Falla rapido si falta la API key, antes de cargar modelos/indices.
     get_openai_api_key()
     ensure_dirs()
@@ -164,10 +184,27 @@ def main() -> None:
 
     casos = _cargar_casos()
 
+    if args.casos:
+        ids_pedidos = [s.strip() for s in args.casos.split(",") if s.strip()]
+        casos = [c for c in casos if c["id_caso"] in ids_pedidos]
+        faltantes = set(ids_pedidos) - {c["id_caso"] for c in casos}
+        if faltantes:
+            raise ValueError(f"id_caso no encontrado en casos_15_perfil.csv: {sorted(faltantes)}")
+        etiqueta = "piloto_casos_" + "_".join(ids_pedidos)
+        dir_salida = RECOMENDACIONES_CSV.parent / etiqueta
+        dir_salida.mkdir(parents=True, exist_ok=True)
+        ruta_recomendaciones = dir_salida / RECOMENDACIONES_CSV.name
+        ruta_trazas = dir_salida / TRAZAS_JSON.name
+        ruta_run_log = dir_salida / RUN_LOG_JSONL.name
+    else:
+        ruta_recomendaciones = RECOMENDACIONES_CSV
+        ruta_trazas = TRAZAS_JSON
+        ruta_run_log = RUN_LOG_JSONL
+
     filas_csv: list[dict] = []
     trazas: list[dict] = []
 
-    with open(RUN_LOG_JSONL, "w", encoding="utf-8") as log_f:
+    with open(ruta_run_log, "w", encoding="utf-8") as log_f:
         for caso in casos:
             traza, fila_csv, entrada_log = _procesar_caso(caso, indice_acciones, indice_promociones)
             filas_csv.append(fila_csv)
@@ -175,18 +212,18 @@ def main() -> None:
             log_f.write(json.dumps(entrada_log, ensure_ascii=False) + "\n")
             print(f"caso {caso['id_caso']}: revision_manual={fila_csv['revision_manual']}")
 
-    with open(RECOMENDACIONES_CSV, "w", encoding="utf-8", newline="") as csv_f:
+    with open(ruta_recomendaciones, "w", encoding="utf-8", newline="") as csv_f:
         campos = ["id_caso", "recomendacion", "accion", "plazo", "justificacion", "revision_manual"]
         escritor = csv.DictWriter(csv_f, fieldnames=campos)
         escritor.writeheader()
         escritor.writerows(filas_csv)
 
-    TRAZAS_JSON.write_text(json.dumps(trazas, ensure_ascii=False, indent=2), encoding="utf-8")
+    ruta_trazas.write_text(json.dumps(trazas, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(f"\nListo. {len(casos)} casos procesados.")
-    print(f"  -> {RECOMENDACIONES_CSV}")
-    print(f"  -> {TRAZAS_JSON}")
-    print(f"  -> {RUN_LOG_JSONL}")
+    print(f"  -> {ruta_recomendaciones}")
+    print(f"  -> {ruta_trazas}")
+    print(f"  -> {ruta_run_log}")
 
 
 if __name__ == "__main__":
