@@ -22,8 +22,12 @@ adjetivo).
    Dos clientes que ganan la misma accion NO deben sonar igual si su
    perfil es distinto: un cliente con inactividad reciente y patron de
    compra frecuente transmite mas urgencia que uno con inactividad
-   prolongada y patron esporadico. Usa el matiz relativo del perfil
-   (reciente/prolongado, frecuente/esporadico), nunca cifras exactas.
+   prolongada y patron esporadico. Puedes usar el matiz relativo del
+   perfil (reciente/prolongado, frecuente/esporadico) o, si suena
+   natural, una cifra concreta del perfil (dias sin comprar, numero de
+   compras anteriores) -- ver el punto de estilo sobre cifras del perfil
+   mas abajo. Ninguna de las dos formas es obligatoria en cada caso;
+   elige la que suene mas a nota real de vendedor para este cliente.
 2. PROHIBIDO reutilizar la misma oracion generica que serviria para
    cualquier cliente inactivo (por ejemplo "realizar un seguimiento
    ligero para reactivar su interes en nuestros productos" no debe salir
@@ -68,14 +72,15 @@ adjetivo).
   clave, robusto, integral, crucial, fundamental, esencial, optimo,
   relevante, significativo, "indica que", "resulta importante", "se
   recomienda", adecuado, personalizado, "experiencia del cliente".
-- PROHIBIDO citar cifras exactas de recencia, frecuencia o monto del
-  perfil del cliente (por ejemplo, no digas "159 dias" ni "$1.401").
-  Si necesitas referirte al tiempo sin comprar, usa expresiones
-  naturales de vendedor como "hace varios meses que no compra" o "lleva
-  un tiempo sin pasar pedido". La unica excepcion es el campo `plazo`,
-  que SI debe contener una cifra de tiempo concreta (ver punto 3 de
-  arriba), porque no es una cifra del perfil del cliente sino del plazo
-  de la accion.
+- PUEDES citar una cifra del perfil del cliente (dias sin comprar,
+  numero de compras anteriores) cuando suene natural en boca de un
+  vendedor -- los vendedores reales lo hacen (ej. "entender motivo de 72
+  dias sin compra", "revisar sus 4 compras anteriores"). No es
+  obligatorio: usalo solo si aporta a la nota, no lo fuerces en cada
+  campo ni en cada caso. Evita mencionar el monto acumulado en dolares
+  salvo que sea claramente relevante para la accion (p.ej. si la accion
+  depende de un umbral de monto) -- el monto es el dato mas sensible del
+  perfil.
 
 ## Campos y limites (limites de palabras estrictos, cuenta antes de responder)
 

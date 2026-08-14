@@ -106,12 +106,7 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
 
     for intento in range(1, LLM_MAX_RETRIES_AGENTE4 + 1):
         salida_a4, prompt_a4, resp_a4 = agente4_generador(resumen_perfil, contexto_condensado)
-        resultado_validacion = validar_salida_agente4(
-            salida_a4,
-            recency_dias=caso["recency_dias"],
-            frequency=caso["frequency"],
-            monetary_usd=caso["monetary_usd"],
-        )
+        resultado_validacion = validar_salida_agente4(salida_a4, monetary_usd=caso["monetary_usd"])
         intentos_a4.append(
             {
                 "intento": intento,

@@ -41,7 +41,7 @@ def test_caso_valido_pasa():
         "plazo": "8 dias",
         "justificacion": "Hace varios meses que no compra y suele responder bien a promociones de vinos",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check("caso valido pasa sin errores", r.valido, str(r.errores))
 
 
@@ -52,7 +52,7 @@ def test_excede_limite_palabras_recomendacion():
         "plazo": "8 dias",
         "justificacion": "Justificacion corta y valida para este cliente en particular.",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "recomendacion de 30 palabras falla por limite (25)",
         not r.valido and any("recomendacion" in e and "limite" in e for e in r.errores),
@@ -67,7 +67,7 @@ def test_excede_limite_palabras_accion():
         "plazo": "8 dias",
         "justificacion": "Justificacion corta y valida para este cliente en particular.",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "accion de 15 palabras falla por limite (4)",
         not r.valido and any("'accion'" in e and "limite" in e for e in r.errores),
@@ -84,7 +84,7 @@ def test_accion_de_5_palabras_falla_limite_nuevo():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "accion de 5 palabras falla por el nuevo limite de 4",
         not r.valido and any("'accion'" in e and "limite" in e for e in r.errores),
@@ -99,7 +99,7 @@ def test_accion_de_4_palabras_pasa():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check("accion de 4 palabras (limite inclusive) pasa", r.valido, str(r.errores))
 
 
@@ -110,7 +110,7 @@ def test_vinetas_prohibidas():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "vinetas de lista son rechazadas",
         not r.valido and any("vineta" in e for e in r.errores),
@@ -125,7 +125,7 @@ def test_negrita_markdown_prohibida():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "negrita markdown es rechazada",
         not r.valido and any("negrita" in e for e in r.errores),
@@ -140,7 +140,7 @@ def test_emoji_prohibido():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "emoji es rechazado",
         not r.valido and any("emoji" in e for e in r.errores),
@@ -155,7 +155,7 @@ def test_palabra_prohibida_optimizar():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "'optimizar' es rechazada",
         not r.valido and any("optimizar" in e for e in r.errores),
@@ -171,7 +171,7 @@ def test_palabra_prohibida_no_hace_falso_positivo_por_subcadena():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "'declive' no dispara falso positivo de 'clave'",
         r.valido,
@@ -179,29 +179,36 @@ def test_palabra_prohibida_no_hace_falso_positivo_por_subcadena():
     )
 
 
-def test_fuga_recencia_exacta():
+def test_citar_dias_del_perfil_ya_no_se_rechaza():
+    # Hasta el 2026-08-14 este campo se rechazaba (fuga de RFM). Medir el
+    # corpus real de expertos mostro que EH2 cita "N dias sin comprar" en
+    # 6/15 casos (40%, sistematico) -- prohibirselo al sistema alejaba su
+    # registro del humano en vez de acercarlo, y era ademas un eje de fuga
+    # perfecto para el panel ciego. Ver validador.py docstring del modulo.
     salida = {
-        "recomendacion": "Llamalo porque lleva 159 dias sin comprar y podria interesarle la promocion vigente de vinos.",
-        "accion": "Llamar por telefono al cliente.",
+        "recomendacion": "Llamalo porque lleva 159 dias sin comprar y podria interesarle la promocion vigente de vinos",
+        "accion": "Llamada",
         "plazo": "8 dias",
-        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
-        "cifra exacta de recencia (159 dias) es rechazada",
-        not r.valido and any("filtra" in e for e in r.errores),
+        "citar '159 dias' (cifra de recencia real del caso) ya no se rechaza",
+        r.valido,
         str(r.errores),
     )
 
 
 def test_fuga_monto_exacto():
+    # El monto SI se sigue bloqueando: ningun experto (EH1 ni EH2) lo cita
+    # nunca en el corpus real, a diferencia de dias/frecuencia.
     salida = {
-        "recomendacion": "Llamalo esta semana, historicamente compro $1401 y podria interesarle la promocion vigente de vinos.",
-        "accion": "Llamar por telefono al cliente.",
+        "recomendacion": "Llamalo esta semana, historicamente compro $1401 y podria interesarle la promocion vigente de vinos",
+        "accion": "Llamada",
         "plazo": "8 dias",
-        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "monto exacto ($1401) es rechazado",
         not r.valido and any("filtra" in e for e in r.errores),
@@ -217,7 +224,7 @@ def test_plazo_con_numero_no_dispara_fuga():
         "plazo": "15 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "plazo con numero propio de la accion (15 dias, no es RFM) no dispara fuga",
         r.valido,
@@ -232,7 +239,7 @@ def test_punto_final_es_rechazado():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "'recomendacion' con punto final es rechazada",
         not r.valido and any("termina en punto" in e for e in r.errores),
@@ -248,7 +255,7 @@ def test_plazo_vago_es_rechazado():
         "plazo": "En las proximas semanas",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "plazo vago sin numero ('en las proximas semanas') es rechazado",
         not r.valido and any("no es una cifra concreta" in e for e in r.errores),
@@ -264,7 +271,7 @@ def test_plazo_lo_antes_posible_es_rechazado():
         "plazo": "Lo antes posible.",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "'lo antes posible.' es rechazado (sin numero y con punto final)",
         not r.valido
@@ -281,7 +288,7 @@ def test_plazo_fuera_de_rango_es_rechazado():
         "plazo": "2 dias",  # bajo el minimo de 3
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "plazo de 2 dias (bajo el minimo de 3) es rechazado",
         not r.valido and any("fuera del rango esperable" in e for e in r.errores),
@@ -289,7 +296,7 @@ def test_plazo_fuera_de_rango_es_rechazado():
     )
 
     salida["plazo"] = "2 meses"  # 60 dias equivalentes, sobre el maximo de 30
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "plazo de 2 meses (sobre el maximo de 30 dias) es rechazado",
         not r.valido and any("fuera del rango esperable" in e for e in r.errores),
@@ -304,7 +311,7 @@ def test_plazo_1_mes_en_el_limite_pasa():
         "plazo": "1 mes",  # 30 dias, justo en el limite superior
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check("plazo '1 mes' (30 dias, limite superior inclusive) pasa", r.valido, str(r.errores))
 
 
@@ -317,7 +324,7 @@ def test_palabra_prohibida_crucial():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "'crucial' es rechazada (registro de informe, no de vendedor)",
         not r.valido and any("crucial" in e for e in r.errores),
@@ -332,7 +339,7 @@ def test_palabra_prohibida_personalizado():
         "plazo": "8 dias",
         "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "'personalizado' es rechazada",
         not r.valido and any("personalizado" in e for e in r.errores),
@@ -347,7 +354,7 @@ def test_campo_faltante():
         "plazo": "8 dias",
         # falta 'justificacion'
     }
-    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    r = validar_salida_agente4(salida, MONETARY)
     check(
         "campo faltante ('justificacion') es rechazado",
         not r.valido and any("justificacion" in e for e in r.errores),

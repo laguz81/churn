@@ -8,11 +8,18 @@ Reglas:
   - Prohibido markdown/formato: vinetas, negritas, encabezados, emojis,
     listas numeradas.
   - Prohibido usar palabras de la lista de tono "consultor/IA".
-  - Prohibido filtrar cifras exactas de RFM del caso (recency/frequency/
-    monetary) disfrazadas de texto de venta. Es una heuristica que
-    compara numeros sueltos en el texto contra los valores reales del
-    caso, no una prohibicion generica de numeros (el campo `plazo`
-    legitimamente lleva numeros).
+  - Prohibido filtrar el MONTO exacto del caso disfrazado de texto de
+    venta (heuristica: compara numeros en $ contra monetary_usd real).
+    Citar dias/frecuencia SI esta permitido desde 2026-08-14 (ver
+    prompts/generador.md): la version anterior de este validador
+    tambien rechazaba esas cifras, pero medir el corpus real de
+    expertos mostro que EH2 cita "N dias sin comprar" o "sus N compras
+    anteriores" en 6/15 casos (40%, sistematico) -- prohibirselo al
+    sistema alejaba su registro del humano en vez de acercarlo, y
+    ademas era un eje de fuga perfecto para el panel ciego (la opcion
+    que citaba una cifra siempre era la humana). El monto en dolares se
+    mantiene bloqueado porque ningun experto (EH1 ni EH2) lo cita nunca
+    en el corpus real -- no hay precedente humano que lo justifique.
 """
 
 from __future__ import annotations
@@ -57,9 +64,6 @@ _PATRON_EMOJI = re.compile(
     "]"
 )
 
-_PATRON_NUMERO_CON_UNIDAD = re.compile(
-    r"(\d[\d.,]*)\s*(d[ií]as?|transacciones|compras)\b", re.IGNORECASE
-)
 _PATRON_MONTO = re.compile(r"\$\s*([\d.,]+)")
 
 # El campo 'plazo' debe ser CONCRETO: numero + unidad temporal (dias,
@@ -162,12 +166,11 @@ def _validar_palabras_prohibidas(campo: str, valor: str, errores: list[str]) -> 
             errores.append(f"'{campo}' usa la palabra prohibida '{palabra}'")
 
 
-def _validar_fuga_rfm(
-    campo: str, valor: str, recency_dias: float, frequency: float, monetary_usd: float, errores: list[str]
-) -> None:
-    """Heuristica: si aparece un numero seguido de 'dias'/'transacciones'/
-    'compras', o un monto en $, que coincide (aprox.) con los valores
-    reales del caso, se considera fuga de cifra exacta de RFM."""
+def _validar_fuga_monto(campo: str, valor: str, monetary_usd: float, errores: list[str]) -> None:
+    """Heuristica: si aparece un monto en $ que coincide (aprox.) con el
+    monetary_usd real del caso, se considera fuga. Citar dias/frecuencia
+    ya NO se valida aqui -- esta permitido desde 2026-08-14, ver
+    docstring del modulo."""
 
     def _num_de(s: str) -> float | None:
         s = s.replace(",", "")
@@ -175,18 +178,6 @@ def _validar_fuga_rfm(
             return float(s)
         except ValueError:
             return None
-
-    for match in _PATRON_NUMERO_CON_UNIDAD.finditer(valor):
-        numero = _num_de(match.group(1))
-        if numero is None:
-            continue
-        if (
-            _aprox_igual(numero, recency_dias)
-            or _aprox_igual(numero, frequency)
-        ):
-            errores.append(
-                f"'{campo}' filtra una cifra RFM del caso ('{match.group(0).strip()}')"
-            )
 
     for match in _PATRON_MONTO.finditer(valor):
         numero = _num_de(match.group(1))
@@ -243,12 +234,7 @@ def detectar_repeticion_plantilla(
     return ResultadoAntiPlantilla(valida=(len(repeticiones) == 0), repeticiones=repeticiones)
 
 
-def validar_salida_agente4(
-    salida: dict,
-    recency_dias: float,
-    frequency: float,
-    monetary_usd: float,
-) -> ResultadoValidacion:
+def validar_salida_agente4(salida: dict, monetary_usd: float) -> ResultadoValidacion:
     errores: list[str] = []
 
     for campo in CAMPOS_SALIDA:
@@ -263,7 +249,7 @@ def validar_salida_agente4(
         _validar_limite_palabras(campo, valor, errores)
         _validar_formato_prohibido(campo, valor, errores)
         _validar_palabras_prohibidas(campo, valor, errores)
-        _validar_fuga_rfm(campo, valor, recency_dias, frequency, monetary_usd, errores)
+        _validar_fuga_monto(campo, valor, monetary_usd, errores)
         _validar_sin_punto_final(campo, valor, errores)
 
     # 'plazo' no lleva limite de palabras ni chequeo de fuga RFM (es una
