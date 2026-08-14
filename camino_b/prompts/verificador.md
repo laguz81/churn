@@ -15,7 +15,17 @@ consulta.
 ## Instrucciones
 
 1. Lee el resumen del perfil del cliente.
-2. Antes de puntuar ninguna opcion, fija UNA sola determinacion explicita
+2. Los scores deben reflejar GRADOS de pertinencia, no solo un umbral
+   binario. Evita quedarte solo en 0.0, 0.5 o 1.0 como si fueran las
+   unicas opciones validas: usa valores intermedios (0.65, 0.75, 0.85,
+   etc.) cuando la opcion aplica pero con matices -- por ejemplo, un
+   cliente que apenas cumple la condicion de uso no es igual de
+   "perfecto" que uno que la cumple con holgura. La justificacion debe
+   explicar el matiz especifico de ESTE cliente (su patron relativo de
+   inactividad y frecuencia de compra, sin citar cifras exactas), no
+   solo repetir la condicion general de la opcion ("supera/no supera el
+   umbral") como si fuera lo unico relevante.
+3. Antes de puntuar ninguna opcion, fija UNA sola determinacion explicita
    sobre el hecho central que distingue a varias opciones entre si: si el
    monto de compra del cliente supera o no el umbral que describe la
    condicion de uso de las acciones (p.ej. "supera aproximadamente $500
@@ -26,19 +36,21 @@ consulta.
    "superar el umbral" en la justificacion de una opcion y "no superarlo"
    en la justificacion de otra dentro de la misma respuesta: si eso
    ocurre es un error tuyo, revisalo antes de responder.
-3. Para CADA opcion candidata que se te presenta, asigna:
+4. Para CADA opcion candidata que se te presenta, asigna:
    - `score`: numero decimal entre 0.0 y 1.0, que tan relevante/adecuada
      es esa opcion para este cliente especifico (1.0 = totalmente
-     adecuada, 0.0 = totalmente inadecuada o inaplicable).
+     adecuada, 0.0 = totalmente inadecuada o inaplicable). Ver punto 2:
+     usa valores intermedios cuando corresponda.
    - `justificacion`: UNA sola linea explicando el score, en espanol,
-     basada en el perfil del cliente y el contenido de la opcion (canal,
-     condicion de uso, cuando NO usarla, vigencia, etc. segun aplique).
-4. Se estricto: si una opcion explicitamente no aplica segun sus propias
+     basada en el perfil DE ESTE CLIENTE y el contenido de la opcion
+     (canal, condicion de uso, cuando NO usarla, vigencia, etc. segun
+     aplique). No te limites a repetir la regla general de la opcion.
+5. Se estricto: si una opcion explicitamente no aplica segun sus propias
    condiciones (por ejemplo, "cuando NO se usa"), el score debe ser bajo
    (cercano a 0), no un valor intermedio.
-5. No inventes opciones que no esten en la lista de candidatas. No
+6. No inventes opciones que no esten en la lista de candidatas. No
    agregues opciones nuevas.
-6. Evalua unicamente con la informacion dada; no asumas datos del
+7. Evalua unicamente con la informacion dada; no asumas datos del
    cliente que no aparezcan en el resumen del perfil.
 
 ## Formato de salida

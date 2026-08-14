@@ -3,10 +3,13 @@ Orquesta el pipeline completo de 4 agentes sobre casos_15_perfil.csv.
 
 IMPORTANTE (lease antes de ejecutar):
   Este script SI llama a la API de OpenAI de verdad (4+ llamadas LLM por
-  caso) y esta pensado para correr sobre los 15 casos reales del estudio.
-  El usuario indico explicitamente que la generacion real sobre los 15
-  casos esta pausada hasta resolver una pregunta de politica de negocio
-  pendiente. NO ejecutar este script end-to-end hasta esa confirmacion.
+  caso). Al final de cada corrida se ejecuta una validacion anti-plantilla
+  a nivel de CORRIDA (no por caso): si algun campo de salida repite el
+  mismo valor literal en mas de config.MAX_REPETICION_LITERAL_PCT de los
+  casos, la corrida completa se marca invalida en
+  resultados/validacion_corrida.json (o su equivalente bajo --casos) y se
+  imprime una advertencia clara en stderr. El CSV se escribe de todas
+  formas para poder inspeccionar la salida cruda.
 
 Fuente de casos: UNICAMENTE config.CASOS_PERFIL_CSV
 (corpus_1/casos_15_perfil.csv). Este modulo NUNCA debe leer
@@ -27,6 +30,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from datetime import datetime, timezone
 
 from agentes import (
@@ -43,13 +47,14 @@ from config import (
     INDICE_PROMOCIONES_META_PATH,
     INDICE_PROMOCIONES_PATH,
     LLM_MAX_RETRIES_AGENTE4,
+    MAX_REPETICION_LITERAL_PCT,
     RECOMENDACIONES_CSV,
     RUN_LOG_JSONL,
     TRAZAS_JSON,
     ensure_dirs,
     get_openai_api_key,
 )
-from validador import validar_salida_agente4
+from validador import detectar_repeticion_plantilla, validar_salida_agente4
 from vectorstore import VectorIndex
 
 
@@ -87,7 +92,7 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
     contradiccion_umbral = salida_a2.get("contradiccion_umbral")
     contradiccion_umbral_objetivo = salida_a2.get("contradiccion_umbral_objetivo")
 
-    salida_a3 = agente3_sintetizador(salida_a2["items_aprobados_para_agente3"])
+    salida_a3 = agente3_sintetizador(resumen_perfil, salida_a2["items_aprobados_para_agente3"])
     traza.agente3 = salida_a3
     contexto_condensado = salida_a3["output"]["contexto_condensado"]
 
@@ -238,10 +243,42 @@ def main() -> None:
 
     ruta_trazas.write_text(json.dumps(trazas, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    resultado_antiplantilla = detectar_repeticion_plantilla(filas_csv)
+    ruta_validacion_corrida = ruta_recomendaciones.parent / "validacion_corrida.json"
+    ruta_validacion_corrida.write_text(
+        json.dumps(
+            {
+                "valida": resultado_antiplantilla.valida,
+                "n_casos": len(casos),
+                "umbral_repeticion_pct": MAX_REPETICION_LITERAL_PCT,
+                "repeticiones_excesivas": resultado_antiplantilla.repeticiones,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
     print(f"\nListo. {len(casos)} casos procesados.")
     print(f"  -> {ruta_recomendaciones}")
     print(f"  -> {ruta_trazas}")
     print(f"  -> {ruta_run_log}")
+    print(f"  -> {ruta_validacion_corrida}")
+
+    if not resultado_antiplantilla.valida:
+        print(
+            "\n*** CORRIDA MARCADA COMO INVALIDA (validacion anti-plantilla) ***",
+            file=sys.stderr,
+        )
+        print(
+            f"Uno o mas campos repiten el mismo valor literal en mas del "
+            f"{MAX_REPETICION_LITERAL_PCT:.0%} de los {len(casos)} casos -- el sistema no esta "
+            f"individualizando por cliente. Detalle en {ruta_validacion_corrida}:",
+            file=sys.stderr,
+        )
+        for campo, valores in resultado_antiplantilla.repeticiones.items():
+            for valor, conteo in valores.items():
+                print(f"  '{campo}' ({conteo}/{len(casos)}): {valor!r}", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from validador import validar_salida_agente4
+from validador import detectar_repeticion_plantilla, validar_salida_agente4
 
 # Caso sintetico de referencia para el chequeo de fuga de RFM.
 RECENCY = 159.0
@@ -210,6 +210,43 @@ def test_campo_faltante():
         not r.valido and any("justificacion" in e for e in r.errores),
         str(r.errores),
     )
+
+
+def test_antiplantilla_detecta_repeticion_excesiva():
+    # Reproduce el patron real de la corrida 2026-08-14: 9/15 (60%) de
+    # 'recomendacion' identica, por encima del umbral de 20%.
+    filas = [{"recomendacion": "Realizar un seguimiento ligero.", "accion": "x", "plazo": "y", "justificacion": "z"}] * 9
+    filas += [{"recomendacion": f"Recomendacion distinta {i}.", "accion": "x", "plazo": "y", "justificacion": "z"} for i in range(6)]
+    r = detectar_repeticion_plantilla(filas)
+    check(
+        "9/15 (60%) de 'recomendacion' identica se detecta y marca la corrida invalida",
+        not r.valida and "recomendacion" in r.repeticiones,
+        str(r.repeticiones),
+    )
+    check(
+        "el conteo reportado para la frase repetida es 9",
+        r.repeticiones.get("recomendacion", {}).get("Realizar un seguimiento ligero.") == 9,
+    )
+
+
+def test_antiplantilla_no_dispara_con_variacion_normal():
+    # 15 casos, ningun valor literal se repite mas del 20% (umbral: >3/15).
+    filas = [
+        {
+            "recomendacion": f"Recomendacion {i}.",
+            "accion": f"Accion {i}.",
+            "plazo": "2 semanas" if i < 3 else f"{i} dias",  # 3/15 = 20%, no excede (estricto '>')
+            "justificacion": f"Justificacion {i}.",
+        }
+        for i in range(15)
+    ]
+    r = detectar_repeticion_plantilla(filas)
+    check("variacion normal (repeticion en el limite del 20%) no marca la corrida invalida", r.valida, str(r.repeticiones))
+
+
+def test_antiplantilla_lista_vacia_no_revienta():
+    r = detectar_repeticion_plantilla([])
+    check("lista vacia de filas es valida por definicion (nada que evaluar)", r.valida)
 
 
 def main() -> int:

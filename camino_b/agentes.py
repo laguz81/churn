@@ -376,7 +376,7 @@ def agente2_verificador(
 # ---------------------------------------------------------------------------
 
 
-def agente3_sintetizador(items_aprobados: list[dict]) -> dict:
+def agente3_sintetizador(resumen_perfil: str, items_aprobados: list[dict]) -> dict:
     plantilla = _cargar_plantilla(PROMPTS.sintetizador)
 
     if not items_aprobados:
@@ -390,7 +390,9 @@ def agente3_sintetizador(items_aprobados: list[dict]) -> dict:
             )
         opciones_texto = "\n\n".join(bloques)
 
-    prompt_renderizado = _render(plantilla, {"OPCIONES_APROBADAS": opciones_texto})
+    prompt_renderizado = _render(
+        plantilla, {"RESUMEN_PERFIL": resumen_perfil, "OPCIONES_APROBADAS": opciones_texto}
+    )
 
     respuesta = completar_chat(
         system_prompt="Eres el Agente 3 (SINTETIZADOR) de un sistema de retencion de clientes.",

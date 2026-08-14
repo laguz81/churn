@@ -173,6 +173,21 @@ PALABRAS_PROHIBIDAS = (
 CAMPOS_SALIDA = ("recomendacion", "accion", "plazo", "justificacion")
 
 # ---------------------------------------------------------------------------
+# Validacion anti-plantilla (a nivel de CORRIDA completa, no por caso)
+# ---------------------------------------------------------------------------
+
+# Si un mismo valor literal de un campo aparece en mas del 20% de los
+# casos de una corrida, el sistema no esta individualizando por cliente
+# -- esta aplicando una regla fija con una plantilla de texto alrededor.
+# Encontrado empiricamente 2026-08-14: 9/15 (60%) de 'recomendacion'
+# identicas palabra por palabra, 11/15 (73%) de 'plazo' identicos.
+# Rompe el cegado del panel (un evaluador humano detecta el patron). Ver
+# validador.detectar_repeticion_plantilla: marca la CORRIDA completa como
+# invalida, no solo las filas repetidas, porque el problema es sistemico
+# (viene de la falta de matiz en Agente 2/3/4, no de un caso aislado).
+MAX_REPETICION_LITERAL_PCT = float(os.environ.get("MAX_REPETICION_LITERAL_PCT", "0.20"))
+
+# ---------------------------------------------------------------------------
 # Salidas del pipeline
 # ---------------------------------------------------------------------------
 

@@ -20,11 +20,14 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from collections import Counter
+
 from config import (
     CAMPOS_SALIDA,
     LIMITE_PALABRAS_ACCION,
     LIMITE_PALABRAS_JUSTIFICACION,
     LIMITE_PALABRAS_RECOMENDACION,
+    MAX_REPETICION_LITERAL_PCT,
     PALABRAS_PROHIBIDAS,
 )
 
@@ -135,6 +138,40 @@ def _validar_fuga_rfm(
 
 def _aprox_igual(a: float, b: float, tolerancia: float = 0.5) -> bool:
     return abs(a - b) <= tolerancia
+
+
+@dataclass
+class ResultadoAntiPlantilla:
+    valida: bool
+    repeticiones: dict[str, dict[str, int]] = field(default_factory=dict)
+
+
+def detectar_repeticion_plantilla(
+    filas: list[dict],
+    campos: tuple[str, ...] = CAMPOS_SALIDA,
+    umbral_pct: float = MAX_REPETICION_LITERAL_PCT,
+) -> ResultadoAntiPlantilla:
+    """Verifica, a nivel de CORRIDA completa (no por caso), si algun campo
+    repite el mismo valor literal en mas del umbral_pct de las filas.
+
+    Esto es una validacion de sistema, no de caso individual: si el
+    sistema esta razonando por cliente, la redaccion deberia variar aunque
+    la ACCION elegida se repita. Una repeticion literal alta en
+    'recomendacion' o 'justificacion' indica que el generador esta
+    aplicando una plantilla de texto fija, lo cual rompe el cegado del
+    panel humano vs. IA (ver agentes.py, Agente 3/4)."""
+    n = len(filas)
+    repeticiones: dict[str, dict[str, int]] = {}
+    if n == 0:
+        return ResultadoAntiPlantilla(valida=True, repeticiones={})
+
+    for campo in campos:
+        conteo = Counter(fila[campo] for fila in filas if fila.get(campo))
+        excedidos = {valor: c for valor, c in conteo.items() if (c / n) > umbral_pct}
+        if excedidos:
+            repeticiones[campo] = excedidos
+
+    return ResultadoAntiPlantilla(valida=(len(repeticiones) == 0), repeticiones=repeticiones)
 
 
 def validar_salida_agente4(
