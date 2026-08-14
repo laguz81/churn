@@ -1,0 +1,12 @@
+# Defensa en profundidad: aunque el Dockerfile nunca hace COPY de estas
+# rutas, se excluyen del contexto de build para que ni siquiera se envien
+# al daemon de Docker.
+secreto/
+datos/
+data/
+eh1_referencia.csv
+*.db
+__pycache__/
+**/__pycache__/
+*.pyc
+.git/

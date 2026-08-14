@@ -9,3 +9,12 @@ camino_b/resultados/
 camino_b/.env
 camino_b/desktop.ini
 camino_b/**/desktop.ini
+
+panel_evaluacion/secreto/
+panel_evaluacion/data/
+panel_evaluacion/datos/
+panel_evaluacion/.venv/
+panel_evaluacion/__pycache__/
+panel_evaluacion/**/__pycache__/
+panel_evaluacion/*.pyc
+panel_evaluacion/**/*.pyc

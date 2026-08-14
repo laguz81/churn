@@ -1,0 +1,21 @@
+services:
+  panel_evaluacion:
+    build: .
+    image: panel_evaluacion:latest
+    container_name: panel_evaluacion
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATOS_DIR: /app/datos
+      SECRETO_DIR: /app/secreto
+      DB_PATH: /data/respuestas.db
+    volumes:
+      # Contenido no secreto generado por preparar_evaluacion.py
+      # (evaluadores.json + casos.json)
+      - ./datos:/app/datos
+      # Archivo secreto de desciframiento etiqueta -> fuente. Solo lectura.
+      # NUNCA referenciado por el Dockerfile (COPY), solo montado aqui.
+      - ./secreto:/app/secreto:ro
+      # Base de datos SQLite; debe persistir entre reinicios/redeploys.
+      - ./data:/data

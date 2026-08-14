@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block titulo %}Caso {{ posicion }} de {{ total }}{% endblock %}
+{% block contenido %}
+<div class="progreso">Caso {{ posicion }} de {{ total }}</div>
+
+{% if errores %}
+<div class="errores">
+  <strong>Revisa lo siguiente antes de continuar:</strong>
+  <ul>
+    {% for e in errores %}<li>{{ e }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<h1>Perfil del cliente</h1>
+<div class="tarjeta">
+  <div class="perfil-grid">
+    <div class="perfil-item">
+      <span class="etiqueta">Dias desde la ultima compra</span>
+      <span class="valor">{{ perfil.recency_dias }}</span>
+    </div>
+    <div class="perfil-item">
+      <span class="etiqueta">Frecuencia de compra</span>
+      <span class="valor">{{ perfil.frequency }}</span>
+    </div>
+    <div class="perfil-item">
+      <span class="etiqueta">Monto acumulado (USD)</span>
+      <span class="valor">{{ perfil.monetary_usd }}</span>
+    </div>
+    <div class="perfil-item">
+      <span class="etiqueta">Segmento</span>
+      <span class="valor">{{ perfil.segmento }}</span>
+    </div>
+  </div>
+</div>
+
+<h1>Opciones de recomendacion</h1>
+
+<div class="tarjeta">
+  <span class="opcion-titulo">Opcion A</span>
+  <div class="campo">
+    <span class="etiqueta">Recomendacion</span>
+    <span class="valor">{{ opcion_a.recomendacion }}</span>
+  </div>
+  <div class="campo">
+    <span class="etiqueta">Accion</span>
+    <span class="valor">{{ opcion_a.accion }}</span>
+  </div>
+  <div class="campo">
+    <span class="etiqueta">Plazo</span>
+    <span class="valor">{{ opcion_a.plazo }}</span>
+  </div>
+  <div class="campo">
+    <span class="etiqueta">Justificacion</span>
+    <span class="valor">{{ opcion_a.justificacion }}</span>
+  </div>
+</div>
+
+<div class="tarjeta">
+  <span class="opcion-titulo">Opcion B</span>
+  <div class="campo">
+    <span class="etiqueta">Recomendacion</span>
+    <span class="valor">{{ opcion_b.recomendacion }}</span>
+  </div>
+  <div class="campo">
+    <span class="etiqueta">Accion</span>
+    <span class="valor">{{ opcion_b.accion }}</span>
+  </div>
+  <div class="campo">
+    <span class="etiqueta">Plazo</span>
+    <span class="valor">{{ opcion_b.plazo }}</span>
+  </div>
+  <div class="campo">
+    <span class="etiqueta">Justificacion</span>
+    <span class="valor">{{ opcion_b.justificacion }}</span>
+  </div>
+</div>
+
+<h1>Calificacion</h1>
+<form method="post" action="{{ url_for('enviar_caso', token=token, id_caso=id_caso) }}">
+
+  <fieldset>
+    <legend>Opcion A &mdash; Relevancia</legend>
+    <p class="pregunta">Que tan pertinente es esta recomendacion para este cliente en particular?</p>
+    <div class="anclas">
+      {% for n in range(1, 6) %}
+      <label class="ancla">
+        <input type="radio" name="relevancia_a" value="{{ n }}" required
+          {% if valores_previos.get('relevancia_a')|string == n|string %}checked{% endif %}>
+        <span><span class="num">{{ n }}.</span> {{ relevancia_anclas[n] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Opcion A &mdash; Viabilidad</legend>
+    <p class="pregunta">Que tan factible es ejecutar esta recomendacion con los recursos y las politicas actuales de la empresa?</p>
+    <div class="anclas">
+      {% for n in range(1, 6) %}
+      <label class="ancla">
+        <input type="radio" name="viabilidad_a" value="{{ n }}" required
+          {% if valores_previos.get('viabilidad_a')|string == n|string %}checked{% endif %}>
+        <span><span class="num">{{ n }}.</span> {{ viabilidad_anclas[n] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Opcion B &mdash; Relevancia</legend>
+    <p class="pregunta">Que tan pertinente es esta recomendacion para este cliente en particular?</p>
+    <div class="anclas">
+      {% for n in range(1, 6) %}
+      <label class="ancla">
+        <input type="radio" name="relevancia_b" value="{{ n }}" required
+          {% if valores_previos.get('relevancia_b')|string == n|string %}checked{% endif %}>
+        <span><span class="num">{{ n }}.</span> {{ relevancia_anclas[n] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Opcion B &mdash; Viabilidad</legend>
+    <p class="pregunta">Que tan factible es ejecutar esta recomendacion con los recursos y las politicas actuales de la empresa?</p>
+    <div class="anclas">
+      {% for n in range(1, 6) %}
+      <label class="ancla">
+        <input type="radio" name="viabilidad_b" value="{{ n }}" required
+          {% if valores_previos.get('viabilidad_b')|string == n|string %}checked{% endif %}>
+        <span><span class="num">{{ n }}.</span> {{ viabilidad_anclas[n] }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Comentario (opcional)</legend>
+    <p class="pregunta">Algun comentario sobre alguna de las dos opciones?</p>
+    <textarea name="comentario" maxlength="200" placeholder="Maximo 200 caracteres">{{ valores_previos.get('comentario', '') }}</textarea>
+    <div class="contador">Maximo 200 caracteres.</div>
+  </fieldset>
+
+  <button type="submit" class="enviar">Enviar y continuar</button>
+</form>
+{% endblock %}
