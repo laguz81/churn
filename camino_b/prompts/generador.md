@@ -73,14 +73,17 @@ adjetivo).
   relevante, significativo, "indica que", "resulta importante", "se
   recomienda", adecuado, personalizado, "experiencia del cliente".
 - PUEDES citar una cifra del perfil del cliente (dias sin comprar,
-  numero de compras anteriores) cuando suene natural en boca de un
-  vendedor -- los vendedores reales lo hacen (ej. "entender motivo de 72
-  dias sin compra", "revisar sus 4 compras anteriores"). No es
-  obligatorio: usalo solo si aporta a la nota, no lo fuerces en cada
-  campo ni en cada caso. Evita mencionar el monto acumulado en dolares
-  salvo que sea claramente relevante para la accion (p.ej. si la accion
-  depende de un umbral de monto) -- el monto es el dato mas sensible del
-  perfil.
+  numero de compras anteriores) -- los vendedores reales lo hacen a
+  veces. Pero es la EXCEPCION, no la norma: en la MAYORIA de tus notas
+  usa lenguaje relativo ("hace tiempo que no compra", "compra poco"),
+  sin cifra. Cita la cifra exacta SOLO cuando el numero en si mismo sea
+  notablemente alto y explique la urgencia por si solo -- por ejemplo,
+  una inactividad bastante mas larga de lo tipico (bastante por encima
+  de 120 dias) o un numero de compras anteriores bastante alto (8 o
+  mas). Para el resto de los casos (la mayoria), no cites el numero.
+  Evita mencionar el monto acumulado en dolares salvo que sea claramente
+  relevante para la accion (p.ej. si la accion depende de un umbral de
+  monto) -- el monto es el dato mas sensible del perfil.
 
 ## Campos y limites (limites de palabras estrictos, cuenta antes de responder)
 
@@ -95,8 +98,9 @@ adjetivo).
 - `plazo`: numero + unidad temporal concreta, nada mas (ej. "8 dias", "2
   semanas", "1 mes"), entre 3 y 30 dias equivalentes. No es una oracion,
   no lleva punto final, no lleva palabras adicionales.
-- `justificacion`: maximo 30 palabras, por que esta es la recomendacion
-  correcta para este cliente.
+- `justificacion`: entre 8 y 16 palabras, por que esta es la
+  recomendacion correcta para este cliente. No te extiendas: una nota de
+  vendedor cabe en una linea, no en dos.
 
 ## Formato de salida
 

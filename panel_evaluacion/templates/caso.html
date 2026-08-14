@@ -16,7 +16,7 @@
 <div class="tarjeta">
   <div class="perfil-grid">
     <div class="perfil-item">
-      <span class="etiqueta">Dias desde la ultima compra</span>
+      <span class="etiqueta">Días desde la última compra</span>
       <span class="valor">{{ perfil.recency_dias }}</span>
     </div>
     <div class="perfil-item">
@@ -34,16 +34,16 @@
   </div>
 </div>
 
-<h1>Opciones de recomendacion</h1>
+<h1>Opciones de recomendación</h1>
 
 <div class="tarjeta">
-  <span class="opcion-titulo">Opcion A</span>
+  <span class="opcion-titulo">Opción A</span>
   <div class="campo">
-    <span class="etiqueta">Recomendacion</span>
+    <span class="etiqueta">Recomendación</span>
     <span class="valor">{{ opcion_a.recomendacion }}</span>
   </div>
   <div class="campo">
-    <span class="etiqueta">Accion</span>
+    <span class="etiqueta">Acción</span>
     <span class="valor">{{ opcion_a.accion }}</span>
   </div>
   <div class="campo">
@@ -51,19 +51,19 @@
     <span class="valor">{{ opcion_a.plazo }}</span>
   </div>
   <div class="campo">
-    <span class="etiqueta">Justificacion</span>
+    <span class="etiqueta">Justificación</span>
     <span class="valor">{{ opcion_a.justificacion }}</span>
   </div>
 </div>
 
 <div class="tarjeta">
-  <span class="opcion-titulo">Opcion B</span>
+  <span class="opcion-titulo">Opción B</span>
   <div class="campo">
-    <span class="etiqueta">Recomendacion</span>
+    <span class="etiqueta">Recomendación</span>
     <span class="valor">{{ opcion_b.recomendacion }}</span>
   </div>
   <div class="campo">
-    <span class="etiqueta">Accion</span>
+    <span class="etiqueta">Acción</span>
     <span class="valor">{{ opcion_b.accion }}</span>
   </div>
   <div class="campo">
@@ -71,17 +71,17 @@
     <span class="valor">{{ opcion_b.plazo }}</span>
   </div>
   <div class="campo">
-    <span class="etiqueta">Justificacion</span>
+    <span class="etiqueta">Justificación</span>
     <span class="valor">{{ opcion_b.justificacion }}</span>
   </div>
 </div>
 
-<h1>Calificacion</h1>
+<h1>Calificación</h1>
 <form method="post" action="{{ url_for('enviar_caso', token=token, id_caso=id_caso) }}">
 
   <fieldset>
-    <legend>Opcion A &mdash; Relevancia</legend>
-    <p class="pregunta">Que tan pertinente es esta recomendacion para este cliente en particular?</p>
+    <legend>Opción A &mdash; Relevancia</legend>
+    <p class="pregunta">¿Qué tan pertinente es esta recomendación para este cliente en particular?</p>
     <div class="anclas">
       {% for n in range(1, 6) %}
       <label class="ancla">
@@ -94,8 +94,8 @@
   </fieldset>
 
   <fieldset>
-    <legend>Opcion A &mdash; Viabilidad</legend>
-    <p class="pregunta">Que tan factible es ejecutar esta recomendacion con los recursos y las politicas actuales de la empresa?</p>
+    <legend>Opción A &mdash; Viabilidad</legend>
+    <p class="pregunta">¿Qué tan factible es ejecutar esta recomendación con los recursos y las políticas actuales de la empresa?</p>
     <div class="anclas">
       {% for n in range(1, 6) %}
       <label class="ancla">
@@ -108,8 +108,8 @@
   </fieldset>
 
   <fieldset>
-    <legend>Opcion B &mdash; Relevancia</legend>
-    <p class="pregunta">Que tan pertinente es esta recomendacion para este cliente en particular?</p>
+    <legend>Opción B &mdash; Relevancia</legend>
+    <p class="pregunta">¿Qué tan pertinente es esta recomendación para este cliente en particular?</p>
     <div class="anclas">
       {% for n in range(1, 6) %}
       <label class="ancla">
@@ -122,8 +122,8 @@
   </fieldset>
 
   <fieldset>
-    <legend>Opcion B &mdash; Viabilidad</legend>
-    <p class="pregunta">Que tan factible es ejecutar esta recomendacion con los recursos y las politicas actuales de la empresa?</p>
+    <legend>Opción B &mdash; Viabilidad</legend>
+    <p class="pregunta">¿Qué tan factible es ejecutar esta recomendación con los recursos y las políticas actuales de la empresa?</p>
     <div class="anclas">
       {% for n in range(1, 6) %}
       <label class="ancla">
@@ -137,9 +137,9 @@
 
   <fieldset>
     <legend>Comentario (opcional)</legend>
-    <p class="pregunta">Algun comentario sobre alguna de las dos opciones?</p>
-    <textarea name="comentario" maxlength="200" placeholder="Maximo 200 caracteres">{{ valores_previos.get('comentario', '') }}</textarea>
-    <div class="contador">Maximo 200 caracteres.</div>
+    <p class="pregunta">¿Algún comentario sobre alguna de las dos opciones?</p>
+    <textarea name="comentario" maxlength="200" placeholder="Máximo 200 caracteres">{{ valores_previos.get('comentario', '') }}</textarea>
+    <div class="contador">Máximo 200 caracteres.</div>
   </fieldset>
 
   <button type="submit" class="enviar">Enviar y continuar</button>

@@ -156,7 +156,12 @@ LIMITE_PALABRAS_RECOMENDACION = 25
 # canal ("Llamada"). Esa diferencia de longitud era 100% separable entre
 # fuentes en el panel de evaluacion ciega -- ver prompts/generador.md.
 LIMITE_PALABRAS_ACCION = 4
-LIMITE_PALABRAS_JUSTIFICACION = 30
+# Bajado de 30 (solo max) a un rango [8, 16] el 2026-08-14: sistema
+# promediaba 15.9 palabras/mediana 16 contra 13.6/13 de EH2 en 'justificacion'
+# -- suficiente diferencia de densidad visual (2 lineas vs 1) como para
+# notarse en el panel aunque los RANGOS solaparan. Ver prompts/generador.md.
+LIMITE_PALABRAS_JUSTIFICACION = 16
+LIMITE_PALABRAS_JUSTIFICACION_MIN = 8
 
 # Palabras/frases prohibidas (tono "consultor" / "IA"), coincidencia
 # exacta de palabra o frase completa, sin distinguir mayusculas/minusculas.

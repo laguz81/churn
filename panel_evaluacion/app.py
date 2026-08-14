@@ -36,18 +36,18 @@ CRITERIOS = ("relevancia", "viabilidad")
 ETIQUETAS = ("A", "B")
 
 RELEVANCIA_ANCLAS = {
-    1: "Nada pertinente. Serviria para cualquier cliente o no aplica a este caso.",
+    1: "Nada pertinente. Serviría para cualquier cliente o no aplica a este caso.",
     2: "Poco pertinente.",
     3: "Medianamente pertinente. Aplica, pero de forma general.",
     4: "Pertinente.",
-    5: "Muy pertinente. Responde a la situacion especifica de este cliente.",
+    5: "Muy pertinente. Responde a la situación específica de este cliente.",
 }
 VIABILIDAD_ANCLAS = {
-    1: "Nada viable. No se puede ejecutar como esta planteada.",
-    2: "Poco viable. Requeriria autorizaciones o recursos no disponibles.",
+    1: "Nada viable. No se puede ejecutar como está planteada.",
+    2: "Poco viable. Requeriría autorizaciones o recursos no disponibles.",
     3: "Medianamente viable. Ejecutable con ajustes.",
     4: "Viable.",
-    5: "Muy viable. Ejecutable de inmediato, tal como esta descrita.",
+    5: "Muy viable. Ejecutable de inmediato, tal como está descrita.",
 }
 
 app = Flask(__name__)
@@ -213,7 +213,7 @@ def _validar_puntaje(form, campo: str, errores: list[str]) -> int | None:
     try:
         valor = int(crudo)
     except ValueError:
-        errores.append(f"Valor invalido en: {campo}.")
+        errores.append(f"Valor inválido en: {campo}.")
         return None
     if valor < 1 or valor > 5:
         errores.append(f"Fuera de rango (1-5) en: {campo}.")

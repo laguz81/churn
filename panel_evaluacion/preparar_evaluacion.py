@@ -38,6 +38,7 @@ import csv
 import json
 import os
 import random
+import re
 import secrets
 import sys
 from pathlib import Path
@@ -70,6 +71,87 @@ FORBIDDEN_FILENAME = "privado_mapa_id.csv"
 
 
 # ---------------------------------------------------------------------------
+# Normalizacion de forma en la capa de presentacion
+#
+# Aplicada IDENTICAMENTE a sistema y eh2, aqui, al cargar los CSV -- nunca
+# se escribe de vuelta a casos_15_expertos.csv ni a recomendaciones_ia.csv,
+# que se abren siempre en modo lectura. Motivo: el punto final resulto ser
+# una fuga sistematica al 100% entre las dos fuentes (EH2 conserva punto
+# final en 2/3 campos de texto en los 15 casos, el sistema en 0/3 -- ver
+# revision del panel 2026-08-14). Si un eje delataba de forma perfecta, era
+# razonable sospechar que hubiera mas: mayuscula inicial inconsistente,
+# comillas/vinetas residuales de una fuente y no de la otra, doble espacio,
+# y el acento del campo plazo (EH2 escribe "dias"/"días" mezclado en su CSV
+# original, el generador del sistema nunca acentua).
+# ---------------------------------------------------------------------------
+
+_PATRON_VINETA_O_GUION_INICIAL = re.compile(r"^\s*[-*••–—]+\s*")
+_PATRON_COMILLAS = re.compile(r"[\"'«»‘’“”]")
+_PATRON_ESPACIO_ANTES_PUNTUACION = re.compile(r"\s+([,.;:!?])")
+_PATRON_ESPACIOS_MULTIPLES = re.compile(r"\s{2,}")
+
+
+def normalizar_campo_texto(valor: str) -> str:
+    """Normaliza un campo de texto libre (recomendacion/accion/justificacion)
+    de forma identica sin importar la fuente: sin vineta/guion residual al
+    inicio, sin comillas, sin espacio antes de puntuacion, sin espacios
+    dobles, sin punto final, con mayuscula inicial forzada."""
+    if not valor:
+        return valor
+    texto = valor.strip()
+    texto = _PATRON_VINETA_O_GUION_INICIAL.sub("", texto)
+    texto = _PATRON_COMILLAS.sub("", texto)
+    texto = _PATRON_ESPACIO_ANTES_PUNTUACION.sub(r"\1", texto)
+    texto = _PATRON_ESPACIOS_MULTIPLES.sub(" ", texto)
+    texto = texto.strip()
+    if texto.endswith("."):
+        texto = texto[:-1].rstrip()
+    if texto:
+        texto = texto[0].upper() + texto[1:]
+    return texto
+
+
+# unidad_singular_o_plural -> (forma singular, forma plural), siempre con
+# tilde correcta. Cubre las variantes con y sin tilde que aparecen en el
+# corpus real (EH2 escribe "dias" y "días" de forma inconsistente dentro
+# de su propio CSV; el sistema nunca acentua).
+_UNIDADES_PLAZO = {
+    "dia": ("día", "días"), "dias": ("día", "días"),
+    "día": ("día", "días"), "días": ("día", "días"),
+    "semana": ("semana", "semanas"), "semanas": ("semana", "semanas"),
+    "mes": ("mes", "meses"), "meses": ("mes", "meses"),
+}
+_PATRON_PLAZO = re.compile(r"^\s*(\d+)\s*([A-Za-zÀ-ÿ]+)\s*$")
+
+
+def normalizar_plazo(valor: str) -> str:
+    """Unifica el formato de 'plazo' a 'N unidad' con tilde correcta y
+    concordancia singular/plural, sin importar como vino escrito en el
+    CSV original (con o sin tilde, con o sin punto final)."""
+    if not valor:
+        return valor
+    texto = valor.strip().rstrip(".")
+    m = _PATRON_PLAZO.match(texto)
+    if not m:
+        return texto
+    numero = int(m.group(1))
+    par = _UNIDADES_PLAZO.get(m.group(2).lower())
+    if par is None:
+        return texto
+    unidad = par[0] if numero == 1 else par[1]
+    return f"{numero} {unidad}"
+
+
+def normalizar_campos(fila: dict) -> dict:
+    return {
+        "recomendacion": normalizar_campo_texto(fila["recomendacion"]),
+        "accion": normalizar_campo_texto(fila["accion"]),
+        "plazo": normalizar_plazo(fila["plazo"]),
+        "justificacion": normalizar_campo_texto(fila["justificacion"]),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Carga de datos
 # ---------------------------------------------------------------------------
 
@@ -82,6 +164,15 @@ def _guard_against_privado(path: Path) -> None:
         )
 
 
+def normalizar_segmento(valor: str) -> str:
+    """'en_riesgo' -> 'En riesgo'. Solo presentacion, el CSV fuente no
+    cambia (rfm_segmentado.csv / casos_15_perfil.csv usan guion bajo)."""
+    if not valor:
+        return valor
+    texto = valor.replace("_", " ").strip()
+    return texto[0].upper() + texto[1:] if texto else texto
+
+
 def cargar_perfiles(path: Path) -> dict[int, dict]:
     _guard_against_privado(path)
     perfiles: dict[int, dict] = {}
@@ -89,7 +180,9 @@ def cargar_perfiles(path: Path) -> dict[int, dict]:
         reader = csv.DictReader(f)
         for row in reader:
             id_caso = int(row["id_caso"])
-            perfiles[id_caso] = {campo: row[campo] for campo in CAMPOS_PERFIL}
+            perfil = {campo: row[campo] for campo in CAMPOS_PERFIL}
+            perfil["segmento"] = normalizar_segmento(perfil["segmento"])
+            perfiles[id_caso] = perfil
     return perfiles
 
 
@@ -100,7 +193,7 @@ def cargar_sistema(path: Path) -> dict[int, dict]:
         reader = csv.DictReader(f)
         for row in reader:
             id_caso = int(row["id_caso"])
-            sistema[id_caso] = {campo: row[campo] for campo in CAMPOS_TEXTO}
+            sistema[id_caso] = normalizar_campos({campo: row[campo] for campo in CAMPOS_TEXTO})
     return sistema
 
 
@@ -115,7 +208,7 @@ def cargar_expertos(path: Path) -> tuple[dict[int, dict], list[dict]]:
         for row in reader:
             if row["fuente"].strip().upper() == "EH2":
                 id_caso = int(row["id_caso"])
-                eh2[id_caso] = {campo: row[campo] for campo in CAMPOS_TEXTO}
+                eh2[id_caso] = normalizar_campos({campo: row[campo] for campo in CAMPOS_TEXTO})
             elif row["fuente"].strip().upper() == "EH1":
                 eh1_filas.append(row)
     return eh2, eh1_filas, fieldnames  # type: ignore[return-value]

@@ -5,6 +5,10 @@ fila al CSV.
 
 Reglas:
   - Limite de palabras por campo (recomendacion, accion, justificacion).
+    'justificacion' tambien tiene un MINIMO (8) ademas del maximo (16),
+    desde 2026-08-14: sin piso, el sistema convergia a notas mas largas
+    que EH2 en promedio (15.9 vs 13.6 palabras) -- suficiente para verse
+    como "un bloque mas denso" en el panel aunque los rangos solaparan.
   - Prohibido markdown/formato: vinetas, negritas, encabezados, emojis,
     listas numeradas.
   - Prohibido usar palabras de la lista de tono "consultor/IA".
@@ -33,6 +37,7 @@ from config import (
     CAMPOS_SALIDA,
     LIMITE_PALABRAS_ACCION,
     LIMITE_PALABRAS_JUSTIFICACION,
+    LIMITE_PALABRAS_JUSTIFICACION_MIN,
     LIMITE_PALABRAS_RECOMENDACION,
     MAX_REPETICION_ABSOLUTA,
     MAX_REPETICION_ABSOLUTA_PLAZO,
@@ -45,6 +50,13 @@ LIMITES_PALABRAS = {
     "recomendacion": LIMITE_PALABRAS_RECOMENDACION,
     "accion": LIMITE_PALABRAS_ACCION,
     "justificacion": LIMITE_PALABRAS_JUSTIFICACION,
+}
+
+# Solo 'justificacion' tiene piso ademas de techo: la densidad visual
+# (2026-08-14) mostro que sin minimo el sistema convergia a notas mas
+# largas que EH2 de forma sistematica.
+MINIMOS_PALABRAS = {
+    "justificacion": LIMITE_PALABRAS_JUSTIFICACION_MIN,
 }
 
 # Campos sobre los que aplica el chequeo de formato/tono/fuga de RFM.
@@ -86,12 +98,13 @@ def _contar_palabras(texto: str) -> int:
 
 
 def _validar_limite_palabras(campo: str, valor: str, errores: list[str]) -> None:
-    limite = LIMITES_PALABRAS.get(campo)
-    if limite is None:
-        return
     n = _contar_palabras(valor)
-    if n > limite:
+    limite = LIMITES_PALABRAS.get(campo)
+    if limite is not None and n > limite:
         errores.append(f"'{campo}' excede el limite de {limite} palabras (tiene {n})")
+    minimo = MINIMOS_PALABRAS.get(campo)
+    if minimo is not None and n < minimo:
+        errores.append(f"'{campo}' no llega al minimo de {minimo} palabras (tiene {n})")
 
 
 def _validar_formato_prohibido(campo: str, valor: str, errores: list[str]) -> None:

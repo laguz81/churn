@@ -75,6 +75,49 @@ def test_excede_limite_palabras_accion():
     )
 
 
+def test_justificacion_bajo_minimo_falla():
+    # Rango [8, 16] desde 2026-08-14 (ver config.py): sin piso, el sistema
+    # convergia a notas mas largas que EH2, densidad visual distinta.
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamada",
+        "plazo": "8 dias",
+        "justificacion": "Cliente inactivo, ofrecerle promocion",  # 4 palabras
+    }
+    r = validar_salida_agente4(salida, MONETARY)
+    check(
+        "justificacion de 4 palabras falla por el minimo de 8",
+        not r.valido and any("'justificacion'" in e and "minimo" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_justificacion_sobre_maximo_falla():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamada",
+        "plazo": "8 dias",
+        "justificacion": " ".join(["palabra"] * 17),
+    }
+    r = validar_salida_agente4(salida, MONETARY)
+    check(
+        "justificacion de 17 palabras falla por el nuevo limite de 16",
+        not r.valido and any("'justificacion'" in e and "limite" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_justificacion_dentro_de_rango_pasa():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamada",
+        "plazo": "8 dias",
+        "justificacion": " ".join(["palabra"] * 12),  # dentro de [8, 16]
+    }
+    r = validar_salida_agente4(salida, MONETARY)
+    check("justificacion de 12 palabras (dentro de [8,16]) pasa", r.valido, str(r.errores))
+
+
 def test_accion_de_5_palabras_falla_limite_nuevo():
     # Limite bajado de 12 a 4 el 2026-08-14 (ver config.py): 'accion' debe
     # ser un canal, no una descripcion. 5 palabras ya es demasiado.
