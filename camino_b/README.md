@@ -17,7 +17,7 @@ casos_15_perfil.csv
 +-------------------+
         |
         v
-+-------------------+      FAISS: acciones.index (3 acciones)
++-------------------+      FAISS: acciones.index (4 acciones)
 | Agente 2          |      -> si gana Accion 3: FAISS promociones.index (10)
 | VERIFICADOR       |  -> scores 0-1 por opcion + descarte por theta (0.6)
 +-------------------+
@@ -59,7 +59,10 @@ solo-ingles sobre texto castellano.
 Cada documento markdown se divide por encabezados `## ` de nivel 2:
 
 - `acciones_retencion_1.md` -> 3 chunks (`accion_1`, `accion_2`,
-  `accion_3`), uno por cada `## Accion N: ...`. Se descartan las
+  `accion_3`) + `acciones_retencion_2.md` -> 1 chunk (`accion_4`,
+  agregada 2026-08-14 tras resolver el gap del umbral $500), uno por
+  cada `## Accion N: ...`. Ambos archivos estan en `config.CLAVES_ACCIONES`
+  y se combinan en un unico indice de 4 acciones. Se descartan las
   secciones de procedencia y la lista de "acciones que nunca deben
   recomendarse" (son restricciones globales, no candidatas de
   recuperacion).
@@ -97,7 +100,7 @@ whitelist en `config.CORPUS_WHITELIST`.
 ## Umbral de relevancia (theta) y regla de jerarquia del Agente 2
 
 Ver el docstring de `agentes.py` para el detalle completo. Resumen: se
-puntuan las 3 acciones, se descartan las que no llegan a `theta` (0.6
+puntuan las 4 acciones, se descartan las que no llegan a `theta` (0.6
 por default, `config.THETA_RELEVANCIA`), la accion ganadora es la de
 mayor score entre las que si superan `theta`. Solo si la accion ganadora
 es `accion_3` se recuperan y puntuan las 10 promociones con la misma

@@ -55,9 +55,19 @@ PROMPTS_DIR = CAMINO_B_DIR / "prompts"
 
 CORPUS_WHITELIST = {
     "acciones": CORPUS_DIR / "acciones_retencion_1.md",
+    "acciones_2": CORPUS_DIR / "acciones_retencion_2.md",
     "politica": CORPUS_DIR / "politica_descuentos_1.md",
     "promociones": CORPUS_DIR / "promociones_vigentes_1.md",
 }
+
+# Claves de CORPUS_WHITELIST cuyas secciones "## Accion N: ..." se combinan
+# en un unico indice de acciones de primer nivel. acciones_retencion_2.md
+# se agrego 2026-08-14 (Accion 4: Seguimiento ligero, para clientes bajo el
+# umbral de compra anual que documenta acciones_retencion_1.md) tras
+# detectar que la practica de los expertos por debajo del umbral no estaba
+# en el corpus original. Si se agrega una Accion 5 en un archivo nuevo,
+# basta con sumar su clave aqui.
+CLAVES_ACCIONES = ("acciones", "acciones_2")
 
 # Archivo de entrada seguro para el generador (perfiles RFM, sin datos
 # identificables). Este es el UNICO csv de casos que el pipeline puede leer.
@@ -120,9 +130,9 @@ LLM_MAX_RETRIES_AGENTE4 = 3
 THETA_RELEVANCIA = float(os.environ.get("THETA_RELEVANCIA", "0.6"))
 
 # Cuantas acciones/promociones candidatas trae la busqueda por similitud
-# antes de que el Agente 2 las puntue. Con 3 acciones y 10 promociones en
+# antes de que el Agente 2 las puntue. Con 4 acciones y 10 promociones en
 # total, top_k cubre el corpus completo de cada indice.
-TOP_K_ACCIONES = 3
+TOP_K_ACCIONES = 4
 TOP_K_PROMOCIONES = 10
 
 # ---------------------------------------------------------------------------

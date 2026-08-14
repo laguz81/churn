@@ -1,9 +1,9 @@
 """
-Carga y chunking del corpus (SOLO los 3 archivos .md de la whitelist).
+Carga y chunking del corpus (SOLO los archivos .md de la whitelist).
 
 Regla dura: este modulo nunca debe hacer os.listdir/glob sobre
 CORPUS_DIR. Toda lectura pasa por config.CORPUS_WHITELIST, que enumera
-explicitamente los 3 archivos permitidos. casos_15_expertos.csv y
+explicitamente los archivos permitidos. casos_15_expertos.csv y
 PRIVADO_mapa_id.csv jamas se mencionan ni se abren aqui.
 """
 
@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from config import CORPUS_WHITELIST
+from config import CLAVES_ACCIONES, CORPUS_WHITELIST
 
 
 @dataclass(frozen=True)
@@ -58,28 +58,46 @@ def _leer_whitelisted(clave: str) -> str:
 
 
 def cargar_chunks_acciones() -> list[Chunk]:
-    """Chunkea acciones_retencion_1.md por seccion '## Accion N: ...'.
+    """Chunkea todos los archivos de config.CLAVES_ACCIONES por seccion
+    '## Accion N: ...' y los combina en un unico indice de acciones de
+    primer nivel.
 
     Se descartan las secciones de procedencia y la lista de "acciones que
     NO deben recomendarse nunca" (no son acciones candidatas a recuperar,
-    son restricciones globales), quedando exactamente 3 chunks: Accion 1,
-    Accion 2 y Accion 3.
+    son restricciones globales). Con acciones_retencion_1.md (Accion 1-3)
+    + acciones_retencion_2.md (Accion 4) da exactamente 4 chunks.
+
+    Valida que cada numero de accion aparezca una sola vez entre todos los
+    archivos: si dos archivos definen "Accion 2", es un error del corpus
+    (contenido duplicado o mal versionado), no algo que deba fusionarse
+    silenciosamente.
     """
-    texto = _leer_whitelisted("acciones")
     chunks: list[Chunk] = []
-    for titulo, cuerpo in _split_por_encabezados_h2(texto):
-        if not re.match(r"^Acci[oó]n\s+\d+\s*:", titulo, re.IGNORECASE):
-            continue
-        numero_match = re.search(r"\d+", titulo)
-        numero = numero_match.group(0) if numero_match else str(len(chunks) + 1)
-        chunks.append(
-            Chunk(
-                chunk_id=f"accion_{numero}",
-                titulo=titulo,
-                texto=f"{titulo}\n\n{cuerpo}",
-                fuente="acciones",
+    numeros_vistos: dict[str, str] = {}  # numero -> archivo donde aparecio
+    for clave in CLAVES_ACCIONES:
+        texto = _leer_whitelisted(clave)
+        for titulo, cuerpo in _split_por_encabezados_h2(texto):
+            if not re.match(r"^Acci[oó]n\s+\d+\s*:", titulo, re.IGNORECASE):
+                continue
+            numero_match = re.search(r"\d+", titulo)
+            numero = numero_match.group(0) if numero_match else str(len(chunks) + 1)
+            if numero in numeros_vistos:
+                raise ValueError(
+                    f"Accion {numero} aparece en '{clave}' pero ya se habia "
+                    f"cargado desde '{numeros_vistos[numero]}'. Revisa el corpus: "
+                    "cada numero de accion debe ser unico entre todos los archivos "
+                    "listados en config.CLAVES_ACCIONES."
+                )
+            numeros_vistos[numero] = clave
+            chunks.append(
+                Chunk(
+                    chunk_id=f"accion_{numero}",
+                    titulo=titulo,
+                    texto=f"{titulo}\n\n{cuerpo}",
+                    fuente=clave,
+                )
             )
-        )
+    chunks.sort(key=lambda c: int(re.search(r"\d+", c.chunk_id).group(0)))
     return chunks
 
 

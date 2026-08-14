@@ -1,6 +1,6 @@
 """
 Smoke test del indexador: construye los indices reales a partir del
-corpus (los 3 .md whitelisted) y corre un par de consultas de similitud
+corpus (los .md whitelisted) y corre un par de consultas de similitud
 para comprobar que la recuperacion trae los chunks correctos.
 
 No requiere OPENAI_API_KEY (no llama a ningun LLM, solo al modelo de
@@ -33,12 +33,17 @@ def check(nombre: str, condicion: bool, detalle: str = "") -> None:
 
 
 def main() -> int:
-    print("Cargando chunks del corpus real (whitelist de 3 .md)...")
+    print("Cargando chunks del corpus real (whitelist de 4 .md)...")
     chunks_acciones = cargar_chunks_acciones()
     chunks_promociones = cargar_chunks_promociones()
     chunks_politica = cargar_chunks_politica()
 
-    check("se extraen exactamente 3 acciones", len(chunks_acciones) == 3, f"{len(chunks_acciones)} encontradas")
+    check("se extraen exactamente 4 acciones", len(chunks_acciones) == 4, f"{len(chunks_acciones)} encontradas")
+    check(
+        "accion_4 (Seguimiento ligero) esta en el indice",
+        any(c.chunk_id == "accion_4" for c in chunks_acciones),
+        f"ids encontrados: {[c.chunk_id for c in chunks_acciones]}",
+    )
     check("se extraen exactamente 10 promociones", len(chunks_promociones) == 10, f"{len(chunks_promociones)} encontradas")
     check("se extrae al menos 1 seccion de politica", len(chunks_politica) >= 1, f"{len(chunks_politica)} encontradas")
 
@@ -56,7 +61,7 @@ def main() -> int:
         "llamadas ni WhatsApp, el vendedor no pasa por su zona habitualmente."
     )
     vec_q1 = embeber([consulta_1])[0]
-    resultados_1 = indice_acciones.buscar(vec_q1, k=3)
+    resultados_1 = indice_acciones.buscar(vec_q1, k=4)
     top1_id = resultados_1[0][0].chunk_id
     check(
         "consulta de cliente inactivo sin respuesta a canales virtuales trae Accion 1 o 3 en el top",
@@ -67,12 +72,27 @@ def main() -> int:
     # --- Consulta 2: interes en promociones de vino ---
     consulta_2 = "Cliente interesado en descuentos y promociones vigentes de vinos para reactivar la compra."
     vec_q2 = embeber([consulta_2])[0]
-    resultados_2 = indice_acciones.buscar(vec_q2, k=3)
+    resultados_2 = indice_acciones.buscar(vec_q2, k=4)
     top1_id_2 = resultados_2[0][0].chunk_id
     check(
         "consulta sobre promociones vigentes trae Accion 3 en el top",
         top1_id_2 == "accion_3",
         f"top1={top1_id_2}, scores={[(c.chunk_id, round(s,3)) for c,s in resultados_2]}",
+    )
+
+    # --- Consulta 2b: cliente bajo el umbral de compra anual (Accion 4) ---
+    consulta_2b = (
+        "Cliente inactivo con historial de compras muy bajo en monto anual, "
+        "no alcanza el umbral para gestion comercial cercana, solo amerita "
+        "un registro de control y revision posterior."
+    )
+    vec_q2b = embeber([consulta_2b])[0]
+    resultados_2b = indice_acciones.buscar(vec_q2b, k=4)
+    top1_id_2b = resultados_2b[0][0].chunk_id
+    check(
+        "consulta de cliente bajo el umbral de compra anual trae Accion 4 en el top",
+        top1_id_2b == "accion_4",
+        f"top1={top1_id_2b}, scores={[(c.chunk_id, round(s,3)) for c,s in resultados_2b]}",
     )
 
     # --- Consulta 3: sobre promociones de vino especificas ---

@@ -16,7 +16,9 @@ El enunciado original dice "discard anything scoring below threshold
 theta" y, por separado, "ONLY IF the winning action is Accion 3 ...
 retrieve+score the 10 promotions". Esas dos reglas se combinan asi:
 
-  1. Se puntuan las 3 acciones candidatas.
+  1. Se puntuan las acciones candidatas (4 desde 2026-08-14: Accion 4
+     "Seguimiento ligero" se agrego para clientes bajo el umbral de
+     compra anual que documenta Accion 1; ver acciones_retencion_2.md).
   2. Se descartan (no pasan a los agentes siguientes) las que puntuan
      por debajo de theta.
   3. La "accion ganadora" es la de mayor score ENTRE LAS QUE SUPERARON
