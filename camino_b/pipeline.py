@@ -3,13 +3,15 @@ Orquesta el pipeline completo de 4 agentes sobre casos_15_perfil.csv.
 
 IMPORTANTE (lease antes de ejecutar):
   Este script SI llama a la API de OpenAI de verdad (4+ llamadas LLM por
-  caso). Al final de cada corrida se ejecuta una validacion anti-plantilla
-  a nivel de CORRIDA (no por caso): si algun campo de salida repite el
-  mismo valor literal en mas de config.MAX_REPETICION_LITERAL_PCT de los
-  casos, la corrida completa se marca invalida en
-  resultados/validacion_corrida.json (o su equivalente bajo --casos) y se
-  imprime una advertencia clara en stderr. El CSV se escribe de todas
-  formas para poder inspeccionar la salida cruda.
+  caso). Al final de la corrida COMPLETA (sin --casos) se ejecuta una
+  validacion anti-plantilla a nivel de CORRIDA (no por caso): si algun
+  campo de salida repite el mismo valor literal mas de
+  config.MAX_REPETICION_ABSOLUTA veces (config.MAX_REPETICION_ABSOLUTA_PLAZO
+  para 'plazo'), la corrida completa se marca invalida en
+  resultados/validacion_corrida.json y se imprime una advertencia clara en
+  stderr. El CSV se escribe de todas formas para poder inspeccionar la
+  salida cruda. Con --casos (N chico) esta verificacion se omite: no es
+  interpretable con pocos casos.
 
 Fuente de casos: UNICAMENTE config.CASOS_PERFIL_CSV
 (corpus_1/casos_15_perfil.csv). Este modulo NUNCA debe leer
@@ -47,7 +49,8 @@ from config import (
     INDICE_PROMOCIONES_META_PATH,
     INDICE_PROMOCIONES_PATH,
     LLM_MAX_RETRIES_AGENTE4,
-    MAX_REPETICION_LITERAL_PCT,
+    MAX_REPETICION_ABSOLUTA,
+    MAX_REPETICION_ABSOLUTA_PLAZO,
     RECOMENDACIONES_CSV,
     RUN_LOG_JSONL,
     TRAZAS_JSON,
@@ -243,42 +246,51 @@ def main() -> None:
 
     ruta_trazas.write_text(json.dumps(trazas, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    resultado_antiplantilla = detectar_repeticion_plantilla(filas_csv)
-    ruta_validacion_corrida = ruta_recomendaciones.parent / "validacion_corrida.json"
-    ruta_validacion_corrida.write_text(
-        json.dumps(
-            {
-                "valida": resultado_antiplantilla.valida,
-                "n_casos": len(casos),
-                "umbral_repeticion_pct": MAX_REPETICION_LITERAL_PCT,
-                "repeticiones_excesivas": resultado_antiplantilla.repeticiones,
-            },
-            ensure_ascii=False,
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
-
     print(f"\nListo. {len(casos)} casos procesados.")
     print(f"  -> {ruta_recomendaciones}")
     print(f"  -> {ruta_trazas}")
     print(f"  -> {ruta_run_log}")
-    print(f"  -> {ruta_validacion_corrida}")
 
-    if not resultado_antiplantilla.valida:
-        print(
-            "\n*** CORRIDA MARCADA COMO INVALIDA (validacion anti-plantilla) ***",
-            file=sys.stderr,
+    # La validacion anti-plantilla solo tiene sentido en la corrida
+    # completa (calibrada para N=15): con --casos (N chico) cualquier
+    # reparto 50/50 dispara el umbral por definicion y el resultado no es
+    # interpretable, asi que se omite.
+    if args.casos is None:
+        resultado_antiplantilla = detectar_repeticion_plantilla(filas_csv)
+        ruta_validacion_corrida = ruta_recomendaciones.parent / "validacion_corrida.json"
+        ruta_validacion_corrida.write_text(
+            json.dumps(
+                {
+                    "valida": resultado_antiplantilla.valida,
+                    "n_casos": len(casos),
+                    "limite_repeticion_absoluta": MAX_REPETICION_ABSOLUTA,
+                    "limite_repeticion_absoluta_plazo": MAX_REPETICION_ABSOLUTA_PLAZO,
+                    "repeticiones_excesivas": resultado_antiplantilla.repeticiones,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
         )
-        print(
-            f"Uno o mas campos repiten el mismo valor literal en mas del "
-            f"{MAX_REPETICION_LITERAL_PCT:.0%} de los {len(casos)} casos -- el sistema no esta "
-            f"individualizando por cliente. Detalle en {ruta_validacion_corrida}:",
-            file=sys.stderr,
-        )
-        for campo, valores in resultado_antiplantilla.repeticiones.items():
-            for valor, conteo in valores.items():
-                print(f"  '{campo}' ({conteo}/{len(casos)}): {valor!r}", file=sys.stderr)
+        print(f"  -> {ruta_validacion_corrida}")
+
+        if not resultado_antiplantilla.valida:
+            print(
+                "\n*** CORRIDA MARCADA COMO INVALIDA (validacion anti-plantilla) ***",
+                file=sys.stderr,
+            )
+            print(
+                f"Uno o mas campos repiten el mismo valor literal mas de lo permitido "
+                f"(max {MAX_REPETICION_ABSOLUTA}, max {MAX_REPETICION_ABSOLUTA_PLAZO} para 'plazo') "
+                f"entre los {len(casos)} casos -- el sistema no esta individualizando por cliente. "
+                f"Detalle en {ruta_validacion_corrida}:",
+                file=sys.stderr,
+            )
+            for campo, valores in resultado_antiplantilla.repeticiones.items():
+                for valor, conteo in valores.items():
+                    print(f"  '{campo}' ({conteo}/{len(casos)}): {valor!r}", file=sys.stderr)
+    else:
+        print("  (validacion anti-plantilla omitida: solo aplica a la corrida completa de 15)")
 
 
 if __name__ == "__main__":

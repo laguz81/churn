@@ -27,8 +27,11 @@ from config import (
     LIMITE_PALABRAS_ACCION,
     LIMITE_PALABRAS_JUSTIFICACION,
     LIMITE_PALABRAS_RECOMENDACION,
-    MAX_REPETICION_LITERAL_PCT,
+    MAX_REPETICION_ABSOLUTA,
+    MAX_REPETICION_ABSOLUTA_PLAZO,
     PALABRAS_PROHIBIDAS,
+    PLAZO_MAX_DIAS,
+    PLAZO_MIN_DIAS,
 )
 
 LIMITES_PALABRAS = {
@@ -58,6 +61,14 @@ _PATRON_NUMERO_CON_UNIDAD = re.compile(
     r"(\d[\d.,]*)\s*(d[ií]as?|transacciones|compras)\b", re.IGNORECASE
 )
 _PATRON_MONTO = re.compile(r"\$\s*([\d.,]+)")
+
+# El campo 'plazo' debe ser CONCRETO: numero + unidad temporal (dias,
+# semanas, mes/meses), sin texto adicional. "En las proximas semanas" o
+# "lo antes posible" no matchean (no tienen numero) y fallan la validacion.
+_PATRON_PLAZO_CONCRETO = re.compile(
+    r"^\s*(\d+)\s*(d[ií]as?|semanas?|mes(?:es)?)\s*$", re.IGNORECASE
+)
+_DIAS_POR_UNIDAD = {"dia": 1, "día": 1, "dias": 1, "días": 1, "semana": 7, "semanas": 7, "mes": 30, "meses": 30}
 
 
 @dataclass
@@ -92,10 +103,55 @@ def _validar_formato_prohibido(campo: str, valor: str, errores: list[str]) -> No
         errores.append(f"'{campo}' contiene emojis")
 
 
+def _validar_sin_punto_final(campo: str, valor: str, errores: list[str]) -> None:
+    """Ningun campo debe terminar en punto -- coincide con el registro
+    telegrafico observado en las recomendaciones de los expertos humanos
+    (ver casos_15_expertos.csv, consultado SOLO para calibrar este
+    validador, nunca cargado en el contexto de ningun agente)."""
+    if valor.rstrip().endswith("."):
+        errores.append(f"'{campo}' termina en punto ('{valor.rstrip()[-15:]}')")
+
+
+def _validar_plazo_concreto(valor: str, errores: list[str]) -> None:
+    """El campo 'plazo' debe ser numero + unidad temporal concreta
+    (dias/semanas/mes), dentro del rango [PLAZO_MIN_DIAS, PLAZO_MAX_DIAS].
+    Expresiones vagas como 'en las proximas semanas' o 'lo antes posible'
+    no tienen un numero y fallan aqui."""
+    match = _PATRON_PLAZO_CONCRETO.match(valor)
+    if not match:
+        errores.append(f"'plazo' no es una cifra concreta (numero + unidad): '{valor}'")
+        return
+
+    numero = int(match.group(1))
+    unidad = match.group(2).lower()
+    dias_por_unidad = _DIAS_POR_UNIDAD.get(unidad)
+    if dias_por_unidad is None:
+        # Cubre variantes plurales/singulares no listadas explicitamente
+        # (p.ej. 'meses' ya cubierto, pero por robustez).
+        if unidad.startswith("d"):
+            dias_por_unidad = 1
+        elif unidad.startswith("semana"):
+            dias_por_unidad = 7
+        else:
+            dias_por_unidad = 30
+
+    dias_equivalentes = numero * dias_por_unidad
+    if not (PLAZO_MIN_DIAS <= dias_equivalentes <= PLAZO_MAX_DIAS):
+        errores.append(
+            f"'plazo' ('{valor}' ~= {dias_equivalentes} dias) fuera del rango esperable "
+            f"[{PLAZO_MIN_DIAS}, {PLAZO_MAX_DIAS}] dias"
+        )
+
+
 def _validar_palabras_prohibidas(campo: str, valor: str, errores: list[str]) -> None:
     valor_lower = valor.lower()
     for palabra in PALABRAS_PROHIBIDAS:
-        patron = re.compile(rf"\b{re.escape(palabra.lower())}\b")
+        p = palabra.lower()
+        # Tolera el plural simple en 's' para entradas de una sola palabra
+        # (relevante/relevantes, adecuado/adecuados, personalizado/
+        # personalizados...). No se aplica a frases de varias palabras.
+        sufijo_plural = "" if " " in p else "s?"
+        patron = re.compile(rf"\b{re.escape(p)}{sufijo_plural}\b")
         if patron.search(valor_lower):
             errores.append(f"'{campo}' usa la palabra prohibida '{palabra}'")
 
@@ -149,10 +205,19 @@ class ResultadoAntiPlantilla:
 def detectar_repeticion_plantilla(
     filas: list[dict],
     campos: tuple[str, ...] = CAMPOS_SALIDA,
-    umbral_pct: float = MAX_REPETICION_LITERAL_PCT,
+    limite_por_defecto: int = MAX_REPETICION_ABSOLUTA,
+    limite_plazo: int = MAX_REPETICION_ABSOLUTA_PLAZO,
 ) -> ResultadoAntiPlantilla:
     """Verifica, a nivel de CORRIDA completa (no por caso), si algun campo
-    repite el mismo valor literal en mas del umbral_pct de las filas.
+    repite el mismo valor literal mas de `limite_por_defecto` veces (mas
+    de `limite_plazo` para el campo 'plazo', que tiene un vocabulario
+    razonable mas chico -- "15 dias" es legitimo en varios casos sin ser
+    plantilla).
+
+    Umbral en CONTEO ABSOLUTO, calibrado para N=15 (no tiene sentido con N
+    chico: cualquier reparto 50/50 en un piloto de 2 casos dispara el
+    umbral por definicion -- el llamador debe omitir esta verificacion
+    fuera de la corrida completa).
 
     Esto es una validacion de sistema, no de caso individual: si el
     sistema esta razonando por cliente, la redaccion deberia variar aunque
@@ -160,14 +225,12 @@ def detectar_repeticion_plantilla(
     'recomendacion' o 'justificacion' indica que el generador esta
     aplicando una plantilla de texto fija, lo cual rompe el cegado del
     panel humano vs. IA (ver agentes.py, Agente 3/4)."""
-    n = len(filas)
     repeticiones: dict[str, dict[str, int]] = {}
-    if n == 0:
-        return ResultadoAntiPlantilla(valida=True, repeticiones={})
 
     for campo in campos:
+        limite = limite_plazo if campo == "plazo" else limite_por_defecto
         conteo = Counter(fila[campo] for fila in filas if fila.get(campo))
-        excedidos = {valor: c for valor, c in conteo.items() if (c / n) > umbral_pct}
+        excedidos = {valor: c for valor, c in conteo.items() if c > limite}
         if excedidos:
             repeticiones[campo] = excedidos
 
@@ -195,9 +258,14 @@ def validar_salida_agente4(
         _validar_formato_prohibido(campo, valor, errores)
         _validar_palabras_prohibidas(campo, valor, errores)
         _validar_fuga_rfm(campo, valor, recency_dias, frequency, monetary_usd, errores)
+        _validar_sin_punto_final(campo, valor, errores)
 
-    # 'plazo' solo se valida por formato basico (sin vinetas/markdown/emoji),
-    # no por limite de palabras ni por fuga RFM (es una expresion de tiempo).
+    # 'plazo' no lleva limite de palabras ni chequeo de fuga RFM (es una
+    # expresion de tiempo, no una oracion), pero si formato basico, sin
+    # punto final, y la regla propia de concrecion (numero + unidad,
+    # dentro de rango).
     _validar_formato_prohibido("plazo", salida["plazo"], errores)
+    _validar_sin_punto_final("plazo", salida["plazo"], errores)
+    _validar_plazo_concreto(salida["plazo"], errores)
 
     return ResultadoValidacion(valido=(len(errores) == 0), errores=errores)

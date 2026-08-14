@@ -36,10 +36,10 @@ def check(nombre: str, condicion: bool, detalle: str = "") -> None:
 
 def test_caso_valido_pasa():
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion de vinos vigente antes de que se enfrie la relacion.",
-        "accion": "Llamar por telefono y presentar la promocion vigente de vinos.",
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion de vinos vigente antes de que se enfrie la relacion",
+        "accion": "Llamar por telefono y presentar la promocion vigente de vinos",
         "plazo": "8 dias",
-        "justificacion": "Hace varios meses que no compra y suele responder bien a promociones de vinos.",
+        "justificacion": "Hace varios meses que no compra y suele responder bien a promociones de vinos",
     }
     r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
     check("caso valido pasa sin errores", r.valido, str(r.errores))
@@ -138,10 +138,10 @@ def test_palabra_prohibida_optimizar():
 def test_palabra_prohibida_no_hace_falso_positivo_por_subcadena():
     # "clave" prohibida como palabra completa, no debe disparar en "declive"
     salida = {
-        "recomendacion": "Llamalo esta semana porque su interes esta en declive y podria responder bien a una promocion vigente.",
-        "accion": "Llamar por telefono al cliente.",
+        "recomendacion": "Llamalo esta semana porque su interes esta en declive y podria responder bien a una promocion vigente",
+        "accion": "Llamar por telefono al cliente",
         "plazo": "8 dias",
-        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
     r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
     check(
@@ -184,15 +184,130 @@ def test_fuga_monto_exacto():
 def test_plazo_con_numero_no_dispara_fuga():
     # El plazo SI puede tener numeros propios de la accion, no del perfil.
     salida = {
-        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion.",
-        "accion": "Llamar por telefono y ofrecer la promocion vigente.",
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos antes de que se enfrie la relacion",
+        "accion": "Llamar por telefono y ofrecer la promocion vigente",
         "plazo": "15 dias",
-        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular.",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
     }
     r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
     check(
         "plazo con numero propio de la accion (15 dias, no es RFM) no dispara fuga",
         r.valido,
+        str(r.errores),
+    )
+
+
+def test_punto_final_es_rechazado():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos.",
+        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "plazo": "8 dias",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "'recomendacion' con punto final es rechazada",
+        not r.valido and any("termina en punto" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_plazo_vago_es_rechazado():
+    # Reproduce el defecto real: "en las proximas semanas" no tiene numero.
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "plazo": "En las proximas semanas",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "plazo vago sin numero ('en las proximas semanas') es rechazado",
+        not r.valido and any("no es una cifra concreta" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_plazo_lo_antes_posible_es_rechazado():
+    # Reproduce el otro defecto real: "lo antes posible." (sin numero, con punto).
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "plazo": "Lo antes posible.",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "'lo antes posible.' es rechazado (sin numero y con punto final)",
+        not r.valido
+        and any("no es una cifra concreta" in e for e in r.errores)
+        and any("termina en punto" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_plazo_fuera_de_rango_es_rechazado():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "plazo": "2 dias",  # bajo el minimo de 3
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "plazo de 2 dias (bajo el minimo de 3) es rechazado",
+        not r.valido and any("fuera del rango esperable" in e for e in r.errores),
+        str(r.errores),
+    )
+
+    salida["plazo"] = "2 meses"  # 60 dias equivalentes, sobre el maximo de 30
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "plazo de 2 meses (sobre el maximo de 30 dias) es rechazado",
+        not r.valido and any("fuera del rango esperable" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_plazo_1_mes_en_el_limite_pasa():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele la promocion vigente de vinos",
+        "accion": "Llamar por telefono y ofrecer la promocion vigente",
+        "plazo": "1 mes",  # 30 dias, justo en el limite superior
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check("plazo '1 mes' (30 dias, limite superior inclusive) pasa", r.valido, str(r.errores))
+
+
+def test_palabra_prohibida_crucial():
+    # Reproduce el registro de "informe" detectado en una corrida real:
+    # "Es crucial contactar al cliente..." -- ningun vendedor escribe asi.
+    salida = {
+        "recomendacion": "Es crucial contactar al cliente para ofrecerle la promocion vigente de vinos",
+        "accion": "Llamar por telefono al cliente",
+        "plazo": "8 dias",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "'crucial' es rechazada (registro de informe, no de vendedor)",
+        not r.valido and any("crucial" in e for e in r.errores),
+        str(r.errores),
+    )
+
+
+def test_palabra_prohibida_personalizado():
+    salida = {
+        "recomendacion": "Llamalo esta semana y ofrecele productos personalizados de la linea de vinos",
+        "accion": "Llamar por telefono al cliente",
+        "plazo": "8 dias",
+        "justificacion": "Es una recomendacion clara para reactivar a este cliente en particular",
+    }
+    r = validar_salida_agente4(salida, RECENCY, FREQUENCY, MONETARY)
+    check(
+        "'personalizado' es rechazada",
+        not r.valido and any("personalizado" in e for e in r.errores),
         str(r.errores),
     )
 
@@ -213,8 +328,8 @@ def test_campo_faltante():
 
 
 def test_antiplantilla_detecta_repeticion_excesiva():
-    # Reproduce el patron real de la corrida 2026-08-14: 9/15 (60%) de
-    # 'recomendacion' identica, por encima del umbral de 20%.
+    # Reproduce el patron real de la corrida 2026-08-14: 9/15 'recomendacion'
+    # identica, muy por encima del limite absoluto por defecto (3).
     filas = [{"recomendacion": "Realizar un seguimiento ligero.", "accion": "x", "plazo": "y", "justificacion": "z"}] * 9
     filas += [{"recomendacion": f"Recomendacion distinta {i}.", "accion": "x", "plazo": "y", "justificacion": "z"} for i in range(6)]
     r = detectar_repeticion_plantilla(filas)
@@ -230,18 +345,21 @@ def test_antiplantilla_detecta_repeticion_excesiva():
 
 
 def test_antiplantilla_no_dispara_con_variacion_normal():
-    # 15 casos, ningun valor literal se repite mas del 20% (umbral: >3/15).
+    # 15 casos: 'recomendacion'/'accion'/'justificacion' repiten a lo sumo
+    # 3 veces cada valor (limite por defecto, no excede: estricto '>'), y
+    # 'plazo' repite "2 semanas" 5 veces (justo el limite mas laxo para
+    # ese campo, tampoco excede).
     filas = [
         {
-            "recomendacion": f"Recomendacion {i}.",
-            "accion": f"Accion {i}.",
-            "plazo": "2 semanas" if i < 3 else f"{i} dias",  # 3/15 = 20%, no excede (estricto '>')
-            "justificacion": f"Justificacion {i}.",
+            "recomendacion": f"Recomendacion {i % 5}",
+            "accion": f"Accion {i % 5}",
+            "plazo": "2 semanas" if i < 5 else f"{i} dias",
+            "justificacion": f"Justificacion {i % 5}",
         }
         for i in range(15)
     ]
     r = detectar_repeticion_plantilla(filas)
-    check("variacion normal (repeticion en el limite del 20%) no marca la corrida invalida", r.valida, str(r.repeticiones))
+    check("variacion normal (repeticion en el limite permitido) no marca la corrida invalida", r.valida, str(r.repeticiones))
 
 
 def test_antiplantilla_lista_vacia_no_revienta():

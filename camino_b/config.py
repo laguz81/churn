@@ -153,8 +153,13 @@ LIMITE_PALABRAS_RECOMENDACION = 25
 LIMITE_PALABRAS_ACCION = 12
 LIMITE_PALABRAS_JUSTIFICACION = 30
 
-# Palabras prohibidas (tono "consultor" / "IA"), coincidencia exacta de
-# palabra completa, sin distinguir mayusculas/minusculas.
+# Palabras/frases prohibidas (tono "consultor" / "IA"), coincidencia
+# exacta de palabra o frase completa, sin distinguir mayusculas/minusculas.
+# Segunda tanda (2026-08-14): el caso 14 de una corrida real decia "Es
+# crucial contactar al cliente..." -- registro de informe, no de vendedor
+# apurado tomando nota (comparar con el registro llano de los expertos:
+# "Hacer un acercamiento via telefonica para verificar estado del
+# cliente", "Recuperar cliente, facturacion importante").
 PALABRAS_PROHIBIDAS = (
     "optimizar",
     "estrategico",
@@ -166,6 +171,19 @@ PALABRAS_PROHIBIDAS = (
     "clave",
     "robusto",
     "integral",
+    "crucial",
+    "fundamental",
+    "esencial",
+    "optimo",
+    "óptimo",
+    "relevante",
+    "significativo",
+    "indica que",
+    "resulta importante",
+    "se recomienda",
+    "adecuado",
+    "personalizado",
+    "experiencia del cliente",
 )
 
 # Campos que deben respetar limite de palabras (justificacion y accion no
@@ -173,19 +191,38 @@ PALABRAS_PROHIBIDAS = (
 CAMPOS_SALIDA = ("recomendacion", "accion", "plazo", "justificacion")
 
 # ---------------------------------------------------------------------------
+# El campo 'plazo' debe ser una cifra concreta (numero + unidad temporal),
+# no una expresion vaga ("en las proximas semanas", "lo antes posible").
+# Los expertos humanos usaron valores como "8 dias", "15 dias", "1 mes".
+# Rango esperable: 3 dias a 1 mes (30 dias). Fuera de rango o sin numero
+# -> falla la validacion, Agente 4 reintenta.
+# ---------------------------------------------------------------------------
+
+PLAZO_MIN_DIAS = 3
+PLAZO_MAX_DIAS = 30
+
+# ---------------------------------------------------------------------------
 # Validacion anti-plantilla (a nivel de CORRIDA completa, no por caso)
 # ---------------------------------------------------------------------------
 
-# Si un mismo valor literal de un campo aparece en mas del 20% de los
-# casos de una corrida, el sistema no esta individualizando por cliente
-# -- esta aplicando una regla fija con una plantilla de texto alrededor.
-# Encontrado empiricamente 2026-08-14: 9/15 (60%) de 'recomendacion'
-# identicas palabra por palabra, 11/15 (73%) de 'plazo' identicos.
-# Rompe el cegado del panel (un evaluador humano detecta el patron). Ver
-# validador.detectar_repeticion_plantilla: marca la CORRIDA completa como
-# invalida, no solo las filas repetidas, porque el problema es sistemico
-# (viene de la falta de matiz en Agente 2/3/4, no de un caso aislado).
-MAX_REPETICION_LITERAL_PCT = float(os.environ.get("MAX_REPETICION_LITERAL_PCT", "0.20"))
+# Si un mismo valor literal de un campo se repite mas de N veces dentro de
+# una corrida, el sistema no esta individualizando por cliente -- esta
+# aplicando una regla fija con una plantilla de texto alrededor. Encontrado
+# empiricamente 2026-08-14: 9/15 'recomendacion' identicas palabra por
+# palabra, 11/15 'plazo' identicos. Rompe el cegado del panel (un
+# evaluador humano detecta el patron).
+#
+# Umbral en CONTEO ABSOLUTO (no porcentaje), calibrado para N=15: maximo 3
+# repeticiones por campo, excepto 'plazo' que tolera hasta 5 (el
+# vocabulario razonable de plazos es chico -- "15 dias" es legitimo en
+# varios casos sin que sea plantilla).
+#
+# Esta verificacion SOLO tiene sentido en la corrida completa de 15 casos:
+# con N chico (p.ej. un piloto de --casos 1,2) cualquier reparto 50/50
+# dispara el umbral por definicion y el resultado no es interpretable.
+# pipeline.py la omite cuando se usa --casos.
+MAX_REPETICION_ABSOLUTA = int(os.environ.get("MAX_REPETICION_ABSOLUTA", "3"))
+MAX_REPETICION_ABSOLUTA_PLAZO = int(os.environ.get("MAX_REPETICION_ABSOLUTA_PLAZO", "5"))
 
 # ---------------------------------------------------------------------------
 # Salidas del pipeline
