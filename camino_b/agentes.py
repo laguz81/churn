@@ -31,6 +31,28 @@ retrieve+score the 10 promotions". Esas dos reglas se combinan asi:
      ninguna promocion supera theta, Accion 3 sigue siendo valida por si
      sola (el propio corpus indica que no se descarta por falta de
      promocion vigente: se ofrece a precio normal).
+
+## Red de seguridad: contradiccion de umbral (Agente 2)
+
+Accion 1 y Accion 4 definen condiciones de uso explicitamente opuestas
+sobre el MISMO umbral de compra anual ("supera aprox. $500" vs "no supera
+el umbral"). En la practica, el LLM a veces aprueba las dos a la vez con
+justificaciones textualmente contradictorias sobre el mismo cliente
+(confirmado empiricamente: ocurrio en 2 de 15 casos piloto, ambos con
+montos apenas por encima de $500, incluso despues de reforzar el prompt
+para pedir una determinacion unica y consistente del umbral).
+
+Reforzar el prompt reduce la frecuencia pero no la elimina de forma
+demostrable para casos limite. Por eso, ademas del prompt, hay una
+verificacion en codigo: si "accion_1" y "accion_4" quedan AMBAS aprobadas
+(score >= theta) para el mismo caso, se marca `contradiccion_umbral=True`
+en el resultado del Agente 2. El pipeline usa esa bandera para forzar
+`revision_manual=True` en la fila final, sin importar si el Agente 4
+valido bien el formato: una recomendacion con base logica contradictoria
+no debe salir como si fuera confiable. El "ganador" que se calcula por
+score sigue existiendo (se necesita alguno para continuar con Agente 3/4
+y no bloquear el pipeline), pero queda documentado como no confiable en
+la traza y en el CSV.
 """
 
 from __future__ import annotations
@@ -85,6 +107,28 @@ class ItemEvaluado:
     score: float
     justificacion: str
     aprobado: bool
+
+
+# Pares de acciones cuyas condiciones de uso son mutuamente excluyentes
+# sobre el mismo hecho (el umbral de compra anual): que ambas queden
+# aprobadas a la vez es, por definicion del corpus, una contradiccion.
+_PARES_MUTUAMENTE_EXCLUYENTES = (("accion_1", "accion_4"),)
+
+
+def _detectar_contradiccion_umbral(evaluadas: list[ItemEvaluado]) -> dict | None:
+    """Si dos acciones cuyas condiciones se excluyen mutuamente (ver
+    _PARES_MUTUAMENTE_EXCLUYENTES) quedaron ambas aprobadas, devuelve un
+    detalle de la contradiccion; si no, devuelve None."""
+    por_id = {e.chunk_id: e for e in evaluadas}
+    for id_a, id_b in _PARES_MUTUAMENTE_EXCLUYENTES:
+        item_a, item_b = por_id.get(id_a), por_id.get(id_b)
+        if item_a is not None and item_b is not None and item_a.aprobado and item_b.aprobado:
+            return {
+                "par": [id_a, id_b],
+                id_a: {"score": item_a.score, "justificacion": item_a.justificacion},
+                id_b: {"score": item_b.score, "justificacion": item_b.justificacion},
+            }
+    return None
 
 
 @dataclass
@@ -207,6 +251,7 @@ def agente2_verificador(
     descartadas_acciones = [e for e in evaluadas_acciones if not e.aprobado]
 
     accion_ganadora = max(aprobadas_acciones, key=lambda e: e.score) if aprobadas_acciones else None
+    contradiccion_umbral = _detectar_contradiccion_umbral(evaluadas_acciones)
 
     resultado: dict[str, Any] = {
         "theta": THETA_RELEVANCIA,
@@ -219,6 +264,7 @@ def agente2_verificador(
         "promociones_descartadas": [],
         "promocion_ganadora": None,
         "sin_opcion_viable": accion_ganadora is None,
+        "contradiccion_umbral": contradiccion_umbral,
         "items_aprobados_para_agente3": [],
     }
 

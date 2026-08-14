@@ -82,6 +82,7 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
 
     salida_a2 = agente2_verificador(resumen_perfil, indice_acciones, indice_promociones)
     traza.agente2 = salida_a2
+    contradiccion_umbral = salida_a2.get("contradiccion_umbral")
 
     salida_a3 = agente3_sintetizador(salida_a2["items_aprobados_para_agente3"])
     traza.agente3 = salida_a3
@@ -127,6 +128,14 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
         # para revision manual (nunca se descarta el caso en silencio).
         revision_manual = True
 
+    if contradiccion_umbral:
+        # Agente 2 aprobo a la vez dos acciones cuyas condiciones de uso
+        # se excluyen mutuamente sobre el mismo umbral (ver agentes.py).
+        # El "ganador" que se uso para continuar el pipeline es solo un
+        # mejor esfuerzo; la fila se marca para revision manual sin
+        # importar que el formato de Agente 4 haya validado bien.
+        revision_manual = True
+
     traza.agente4 = {"intentos": intentos_a4, "revision_manual": revision_manual}
 
     fila_csv = {
@@ -150,6 +159,7 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
         "acciones_descartadas_por_umbral": salida_a2["acciones_descartadas"],
         "promociones_descartadas_por_umbral": salida_a2["promociones_descartadas"],
         "theta": salida_a2["theta"],
+        "contradiccion_umbral_agente2": contradiccion_umbral,
     }
 
     return traza, fila_csv, entrada_log
