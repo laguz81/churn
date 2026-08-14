@@ -413,6 +413,21 @@ def agente3_sintetizador(resumen_perfil: str, items_aprobados: list[dict]) -> di
 # ---------------------------------------------------------------------------
 
 
+def _quitar_punto_final(texto: str) -> str:
+    """Recorta un unico punto final sobrante (con espacio opcional antes).
+
+    El LLM no logra evitar el punto final de forma confiable via
+    instruccion sola (confirmado empiricamente: agoto 3/3 reintentos en
+    2 de 2 casos piloto). En vez de gastar reintentos en algo puramente
+    cosmetico que el modelo no cumple, se recorta de forma deterministica
+    aqui, antes de que el validador lo vea -- el punto final nunca fue un
+    problema de contenido, solo de puntuacion."""
+    texto = texto.rstrip()
+    if texto.endswith("."):
+        texto = texto[:-1].rstrip()
+    return texto
+
+
 def agente4_generador(resumen_perfil: str, contexto_condensado: str) -> tuple[dict, str, RespuestaLLM]:
     """Una sola llamada al LLM; el reintento ante fallos de validacion lo
     maneja el pipeline (que es quien conoce las reglas de validacion y los
@@ -427,4 +442,7 @@ def agente4_generador(resumen_perfil: str, contexto_condensado: str) -> tuple[di
         user_prompt=prompt_renderizado,
     )
     salida = _parsear_json_llm(respuesta.texto)
+    for campo in ("recomendacion", "accion", "plazo", "justificacion"):
+        if isinstance(salida.get(campo), str):
+            salida[campo] = _quitar_punto_final(salida[campo])
     return salida, prompt_renderizado, respuesta

@@ -107,7 +107,13 @@ def _validar_sin_punto_final(campo: str, valor: str, errores: list[str]) -> None
     """Ningun campo debe terminar en punto -- coincide con el registro
     telegrafico observado en las recomendaciones de los expertos humanos
     (ver casos_15_expertos.csv, consultado SOLO para calibrar este
-    validador, nunca cargado en el contexto de ningun agente)."""
+    validador, nunca cargado en el contexto de ningun agente).
+
+    Red de respaldo: agentes.agente4_generador ya recorta el punto final
+    de forma deterministica antes de que este validador vea la salida
+    (el LLM no lo evitaba de forma confiable via instruccion sola, agoto
+    reintentos por esto solo). Este chequeo queda como respaldo por si
+    algun otro caller construye la salida sin pasar por ese recorte."""
     if valor.rstrip().endswith("."):
         errores.append(f"'{campo}' termina en punto ('{valor.rstrip()[-15:]}')")
 

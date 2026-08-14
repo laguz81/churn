@@ -16,7 +16,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agentes import ItemEvaluado, _detectar_contradiccion_umbral, _detectar_contradiccion_umbral_objetivo
+from agentes import (
+    ItemEvaluado,
+    _detectar_contradiccion_umbral,
+    _detectar_contradiccion_umbral_objetivo,
+    _quitar_punto_final,
+)
 
 _falla = []
 
@@ -138,6 +143,19 @@ def main() -> int:
             [_item("promocion_1", 0.9, True), _item("promocion_2", 0.2, False)], monetary_usd=1401.30
         )
         is None,
+    )
+
+    # ------------------------------------------------------------------
+    # _quitar_punto_final: el LLM no evita el punto final de forma
+    # confiable via instruccion (agoto 3/3 reintentos en 2/2 casos piloto
+    # reales), asi que se recorta de forma deterministica.
+    # ------------------------------------------------------------------
+    check("quita el punto final simple", _quitar_punto_final("Llamar por telefono.") == "Llamar por telefono")
+    check("quita el punto final con espacio previo", _quitar_punto_final("Llamar por telefono . ") == "Llamar por telefono")
+    check("no toca texto sin punto final", _quitar_punto_final("Llamar por telefono") == "Llamar por telefono")
+    check(
+        "no toca puntos suspensivos ni abreviaturas internas (solo el ultimo caracter)",
+        _quitar_punto_final("Cliente Sr. Perez, llamar hoy.") == "Cliente Sr. Perez, llamar hoy",
     )
 
     if _falla:
