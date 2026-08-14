@@ -1,0 +1,11 @@
+old/
+camino_b/.venv/
+camino_b/__pycache__/
+camino_b/**/__pycache__/
+camino_b/*.pyc
+camino_b/**/*.pyc
+camino_b/indice/
+camino_b/resultados/
+camino_b/.env
+camino_b/desktop.ini
+camino_b/**/desktop.ini

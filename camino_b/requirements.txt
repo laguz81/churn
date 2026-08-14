@@ -1,0 +1,13 @@
+# Generado y verificado empiricamente en Windows / Python 3.13.5
+# (ver camino_b/README.md, seccion "Instalacion y smoke tests" para el
+# detalle de la corrida real de `pip install`).
+#
+# Instalar con:
+#   python -m venv .venv
+#   .venv\Scripts\pip install -r requirements.txt
+
+faiss-cpu==1.15.0
+sentence-transformers==5.1.2
+numpy==2.5.2
+openai==2.8.1
+python-dotenv==1.2.1

@@ -1,0 +1,193 @@
+"""
+Orquesta el pipeline completo de 4 agentes sobre casos_15_perfil.csv.
+
+IMPORTANTE (lease antes de ejecutar):
+  Este script SI llama a la API de OpenAI de verdad (4+ llamadas LLM por
+  caso) y esta pensado para correr sobre los 15 casos reales del estudio.
+  El usuario indico explicitamente que la generacion real sobre los 15
+  casos esta pausada hasta resolver una pregunta de politica de negocio
+  pendiente. NO ejecutar este script end-to-end hasta esa confirmacion.
+
+Fuente de casos: UNICAMENTE config.CASOS_PERFIL_CSV
+(corpus_1/casos_15_perfil.csv). Este modulo NUNCA debe leer
+casos_15_expertos.csv ni PRIVADO_mapa_id.csv; esos nombres no aparecen en
+ninguna ruta de codigo de este archivo.
+
+Uso:
+    python pipeline.py
+"""
+
+from __future__ import annotations
+
+import csv
+import json
+from datetime import datetime, timezone
+
+from agentes import (
+    TrazaCaso,
+    agente1_perfilador,
+    agente2_verificador,
+    agente3_sintetizador,
+    agente4_generador,
+)
+from config import (
+    CASOS_PERFIL_CSV,
+    INDICE_ACCIONES_META_PATH,
+    INDICE_ACCIONES_PATH,
+    INDICE_PROMOCIONES_META_PATH,
+    INDICE_PROMOCIONES_PATH,
+    LLM_MAX_RETRIES_AGENTE4,
+    RECOMENDACIONES_CSV,
+    RUN_LOG_JSONL,
+    TRAZAS_JSON,
+    ensure_dirs,
+    get_openai_api_key,
+)
+from validador import validar_salida_agente4
+from vectorstore import VectorIndex
+
+
+def _cargar_casos() -> list[dict]:
+    """Unica funcion autorizada para leer casos del estudio. Lee
+    exclusivamente config.CASOS_PERFIL_CSV (casos_15_perfil.csv)."""
+    with open(CASOS_PERFIL_CSV, encoding="utf-8", newline="") as f:
+        lector = csv.DictReader(f)
+        casos = []
+        for fila in lector:
+            casos.append(
+                {
+                    "id_caso": fila["id_caso"],
+                    "recency_dias": float(fila["recency_dias"]),
+                    "frequency": float(fila["frequency"]),
+                    "monetary_usd": float(fila["monetary_usd"]),
+                    "segmento": fila["segmento"],
+                }
+            )
+        return casos
+
+
+def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones: VectorIndex) -> tuple[TrazaCaso, dict, dict]:
+    """Corre el caso a traves de los 4 agentes. Devuelve (traza, fila_csv, entrada_run_log)."""
+    traza = TrazaCaso(id_caso=caso["id_caso"], caso_entrada=caso)
+
+    salida_a1 = agente1_perfilador(caso)
+    traza.agente1 = salida_a1
+    resumen_perfil = salida_a1["output"]["resumen_perfil"]
+
+    salida_a2 = agente2_verificador(resumen_perfil, indice_acciones, indice_promociones)
+    traza.agente2 = salida_a2
+
+    salida_a3 = agente3_sintetizador(salida_a2["items_aprobados_para_agente3"])
+    traza.agente3 = salida_a3
+    contexto_condensado = salida_a3["output"]["contexto_condensado"]
+
+    revision_manual = False
+    ultimo_error: list[str] = []
+    salida_final: dict = {}
+    intentos_a4 = []
+
+    for intento in range(1, LLM_MAX_RETRIES_AGENTE4 + 1):
+        salida_a4, prompt_a4, resp_a4 = agente4_generador(resumen_perfil, contexto_condensado)
+        resultado_validacion = validar_salida_agente4(
+            salida_a4,
+            recency_dias=caso["recency_dias"],
+            frequency=caso["frequency"],
+            monetary_usd=caso["monetary_usd"],
+        )
+        intentos_a4.append(
+            {
+                "intento": intento,
+                "output": salida_a4,
+                "prompt_renderizado": prompt_a4,
+                "llm": {
+                    "modelo": resp_a4.modelo,
+                    "seed": resp_a4.seed,
+                    "temperatura": resp_a4.temperatura,
+                    "response_id": resp_a4.response_id,
+                },
+                "validacion": {
+                    "valido": resultado_validacion.valido,
+                    "errores": resultado_validacion.errores,
+                },
+            }
+        )
+        salida_final = salida_a4
+        ultimo_error = resultado_validacion.errores
+        if resultado_validacion.valido:
+            break
+    else:
+        # Se agotaron los reintentos sin que ningun intento pasara la
+        # validacion: se escribe la ultima salida igual, pero marcada
+        # para revision manual (nunca se descarta el caso en silencio).
+        revision_manual = True
+
+    traza.agente4 = {"intentos": intentos_a4, "revision_manual": revision_manual}
+
+    fila_csv = {
+        "id_caso": caso["id_caso"],
+        "recomendacion": salida_final.get("recomendacion", ""),
+        "accion": salida_final.get("accion", ""),
+        "plazo": salida_final.get("plazo", ""),
+        "justificacion": salida_final.get("justificacion", ""),
+        "revision_manual": revision_manual,
+    }
+
+    entrada_log = {
+        "id_caso": caso["id_caso"],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "modelo": intentos_a4[-1]["llm"]["modelo"] if intentos_a4 else None,
+        "temperatura": 0,
+        "seed": intentos_a4[-1]["llm"]["seed"] if intentos_a4 else None,
+        "intentos_agente4": len(intentos_a4),
+        "revision_manual": revision_manual,
+        "ultimo_error_validacion": ultimo_error,
+        "acciones_descartadas_por_umbral": salida_a2["acciones_descartadas"],
+        "promociones_descartadas_por_umbral": salida_a2["promociones_descartadas"],
+        "theta": salida_a2["theta"],
+    }
+
+    return traza, fila_csv, entrada_log
+
+
+def main() -> None:
+    # Falla rapido si falta la API key, antes de cargar modelos/indices.
+    get_openai_api_key()
+    ensure_dirs()
+
+    if not INDICE_ACCIONES_PATH.exists() and not INDICE_ACCIONES_PATH.with_suffix(".npy").exists():
+        raise RuntimeError(
+            "No se encontro el indice de acciones. Corre 'python indexador.py' antes del pipeline."
+        )
+
+    indice_acciones = VectorIndex.cargar(INDICE_ACCIONES_PATH, INDICE_ACCIONES_META_PATH)
+    indice_promociones = VectorIndex.cargar(INDICE_PROMOCIONES_PATH, INDICE_PROMOCIONES_META_PATH)
+
+    casos = _cargar_casos()
+
+    filas_csv: list[dict] = []
+    trazas: list[dict] = []
+
+    with open(RUN_LOG_JSONL, "w", encoding="utf-8") as log_f:
+        for caso in casos:
+            traza, fila_csv, entrada_log = _procesar_caso(caso, indice_acciones, indice_promociones)
+            filas_csv.append(fila_csv)
+            trazas.append(traza.to_dict())
+            log_f.write(json.dumps(entrada_log, ensure_ascii=False) + "\n")
+            print(f"caso {caso['id_caso']}: revision_manual={fila_csv['revision_manual']}")
+
+    with open(RECOMENDACIONES_CSV, "w", encoding="utf-8", newline="") as csv_f:
+        campos = ["id_caso", "recomendacion", "accion", "plazo", "justificacion", "revision_manual"]
+        escritor = csv.DictWriter(csv_f, fieldnames=campos)
+        escritor.writeheader()
+        escritor.writerows(filas_csv)
+
+    TRAZAS_JSON.write_text(json.dumps(trazas, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    print(f"\nListo. {len(casos)} casos procesados.")
+    print(f"  -> {RECOMENDACIONES_CSV}")
+    print(f"  -> {TRAZAS_JSON}")
+    print(f"  -> {RUN_LOG_JSONL}")
+
+
+if __name__ == "__main__":
+    main()

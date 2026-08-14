@@ -1,0 +1,17 @@
+# Copiar el contenido a un archivo ".env" local (no versionado) en esta
+# carpeta, o exportar estas variables como variables de entorno reales.
+# python-dotenv (incluido en requirements.txt) carga automaticamente un
+# archivo ".env" si existe en camino_b/.
+
+# Obligatoria. El pipeline falla rapido y con mensaje claro si falta.
+OPENAI_API_KEY=
+
+# Opcional. Si se omite, se usa el default pinneado en config.py
+# (confirmar que el snapshot siga vigente antes de correr el pipeline).
+OPENAI_MODEL=gpt-4o-2024-08-06
+
+# Opcional. Default: 42.
+LLM_SEED=42
+
+# Opcional. Default: 0.6.
+THETA_RELEVANCIA=0.6
