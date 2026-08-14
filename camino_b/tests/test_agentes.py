@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from agentes import ItemEvaluado, _detectar_contradiccion_umbral
+from agentes import ItemEvaluado, _detectar_contradiccion_umbral, _detectar_contradiccion_umbral_objetivo
 
 _falla = []
 
@@ -82,6 +82,62 @@ def main() -> int:
     check(
         "lista sin accion_4 no revienta y no dispara contradiccion",
         _detectar_contradiccion_umbral(evaluadas_sin_accion4) is None,
+    )
+
+    # ------------------------------------------------------------------
+    # _detectar_contradiccion_umbral_objetivo: verifica contra el monto
+    # REAL del caso, no contra lo que el LLM dijo sobre el otro par.
+    # Reproduce el caso real de la corrida 2026-08-14 (id_caso 1): monto
+    # muy por encima de $500, accion_1 rechazada, accion_4 aprobada, SIN
+    # empate ni contradiccion textual -- la primera red no lo atrapaba.
+    # ------------------------------------------------------------------
+    evaluadas_caso1_real = [
+        _item("accion_4", 1.0, True),
+        _item("accion_3", 0.5, False),
+        _item("accion_1", 0.0, False),
+        _item("accion_2", 0.0, False),
+    ]
+    resultado_obj = _detectar_contradiccion_umbral_objetivo(evaluadas_caso1_real, monetary_usd=1401.30)
+    check(
+        "accion_4 aprobada con monto muy por encima de $500 se detecta (caso real id_caso 1)",
+        resultado_obj is not None and resultado_obj["tipo"] == "accion_4_aprobada_pese_a_superar_umbral",
+        f"resultado={resultado_obj}",
+    )
+    check(
+        "_detectar_contradiccion_umbral (self-contradiccion) NO detecta el caso 1 real (sin empate)",
+        _detectar_contradiccion_umbral(evaluadas_caso1_real) is None,
+    )
+
+    check(
+        "accion_1 aprobada con monto bajo $500 se detecta",
+        (
+            lambda r: r is not None and r["tipo"] == "accion_1_aprobada_pese_a_no_superar_umbral"
+        )(
+            _detectar_contradiccion_umbral_objetivo(
+                [_item("accion_1", 1.0, True), _item("accion_4", 0.0, False)], monetary_usd=148.99
+            )
+        ),
+    )
+    check(
+        "veredicto correcto (accion_1 aprobada, monto sobre $500) no dispara nada",
+        _detectar_contradiccion_umbral_objetivo(
+            [_item("accion_1", 1.0, True), _item("accion_4", 0.0, False)], monetary_usd=1537.77
+        )
+        is None,
+    )
+    check(
+        "veredicto correcto (accion_4 aprobada, monto bajo $500) no dispara nada",
+        _detectar_contradiccion_umbral_objetivo(
+            [_item("accion_1", 0.0, False), _item("accion_4", 1.0, True)], monetary_usd=148.99
+        )
+        is None,
+    )
+    check(
+        "lista de promociones (sin accion_1/accion_4) no revienta y no dispara nada",
+        _detectar_contradiccion_umbral_objetivo(
+            [_item("promocion_1", 0.9, True), _item("promocion_2", 0.2, False)], monetary_usd=1401.30
+        )
+        is None,
     )
 
     if _falla:

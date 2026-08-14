@@ -129,6 +129,16 @@ LLM_MAX_RETRIES_AGENTE4 = 3
 
 THETA_RELEVANCIA = float(os.environ.get("THETA_RELEVANCIA", "0.6"))
 
+# Umbral de compra anual que Accion 1 y Accion 4 usan como condicion de uso
+# ("supera aproximadamente $500 anuales" / "no supera el umbral") en
+# acciones_retencion_1.md y acciones_retencion_2.md. Es un HECHO conocido
+# del caso de entrada (monetary_usd), no algo que el LLM deba inferir: se
+# usa para verificar en codigo que el veredicto del Agente 2 sobre
+# accion_1/accion_4 sea consistente con el dato real, sin depender de que
+# el LLM haga bien esa comparacion numerica (ver agentes.py,
+# _detectar_contradiccion_umbral_objetivo).
+UMBRAL_COMPRA_ANUAL = float(os.environ.get("UMBRAL_COMPRA_ANUAL", "500"))
+
 # Cuantas acciones/promociones candidatas trae la busqueda por similitud
 # antes de que el Agente 2 las puntue. Con 4 acciones y 10 promociones en
 # total, top_k cubre el corpus completo de cada indice.

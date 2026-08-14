@@ -53,6 +53,29 @@ no debe salir como si fuera confiable. El "ganador" que se calcula por
 score sigue existiendo (se necesita alguno para continuar con Agente 3/4
 y no bloquear el pipeline), pero queda documentado como no confiable en
 la traza y en el CSV.
+
+## Segunda red de seguridad: contradiccion contra el hecho conocido
+
+La deteccion de arriba solo atrapa contradicciones TEXTUALES dentro de la
+misma respuesta (las dos opciones aprobadas a la vez). En la corrida
+completa de los 15 casos aparecio un patron distinto y mas dificil de
+detectar: el caso 1 (monetary_usd=$1401.30, muy por encima de $500)
+recibio de Agente 2 un veredicto CONSISTENTE pero objetivamente
+equivocado -- "el cliente no supera el umbral de $500" aplicado por igual
+a accion_1 (rechazada) y accion_4 (aprobada), sin ningun empate ni
+contradiccion textual que la primera red de seguridad pudiera atrapar.
+
+El monto real del cliente (`monetary_usd`) ya es un dato conocido del
+caso de entrada, no algo que el LLM deba inferir del resumen de perfil.
+Por eso `_detectar_contradiccion_umbral_objetivo` compara el veredicto de
+Agente 2 sobre accion_1/accion_4 contra `caso["monetary_usd"]` real (no
+contra lo que el LLM cree que es el monto): si el cliente supera
+`config.UMBRAL_COMPRA_ANUAL` y aun asi accion_4 quedo aprobada, o si NO
+lo supera y accion_1 quedo aprobada, es una contradiccion contra el hecho
+conocido, sin importar si el LLM fue internamente consistente. Esta
+verificacion tampoco corrige el "ganador" en silencio -- solo lo
+documenta y fuerza revision manual, igual que la primera red de
+seguridad.
 """
 
 from __future__ import annotations
@@ -63,7 +86,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from config import PROMPTS, THETA_RELEVANCIA, TOP_K_ACCIONES, TOP_K_PROMOCIONES
+from config import PROMPTS, THETA_RELEVANCIA, TOP_K_ACCIONES, TOP_K_PROMOCIONES, UMBRAL_COMPRA_ANUAL
 from corpus import Chunk
 from embeddings import embeber
 from llm_client import RespuestaLLM, completar_chat
@@ -128,6 +151,35 @@ def _detectar_contradiccion_umbral(evaluadas: list[ItemEvaluado]) -> dict | None
                 id_a: {"score": item_a.score, "justificacion": item_a.justificacion},
                 id_b: {"score": item_b.score, "justificacion": item_b.justificacion},
             }
+    return None
+
+
+def _detectar_contradiccion_umbral_objetivo(
+    evaluadas: list[ItemEvaluado], monetary_usd: float, umbral: float = UMBRAL_COMPRA_ANUAL
+) -> dict | None:
+    """Compara el veredicto de accion_1/accion_4 contra el monto REAL del
+    caso (dato conocido, no inferido por el LLM). Devuelve un detalle si
+    el veredicto contradice el hecho conocido; None si es consistente con
+    el (o si accion_1/accion_4 no aparecen entre las candidatas, p.ej. en
+    una llamada de puntuacion de promociones)."""
+    por_id = {e.chunk_id: e for e in evaluadas}
+    accion_1, accion_4 = por_id.get("accion_1"), por_id.get("accion_4")
+    sobre_umbral = monetary_usd > umbral
+
+    if sobre_umbral and accion_4 is not None and accion_4.aprobado:
+        return {
+            "tipo": "accion_4_aprobada_pese_a_superar_umbral",
+            "monetary_usd": monetary_usd,
+            "umbral": umbral,
+            "accion_4": {"score": accion_4.score, "justificacion": accion_4.justificacion},
+        }
+    if not sobre_umbral and accion_1 is not None and accion_1.aprobado:
+        return {
+            "tipo": "accion_1_aprobada_pese_a_no_superar_umbral",
+            "monetary_usd": monetary_usd,
+            "umbral": umbral,
+            "accion_1": {"score": accion_1.score, "justificacion": accion_1.justificacion},
+        }
     return None
 
 
@@ -239,7 +291,12 @@ def agente2_verificador(
     resumen_perfil: str,
     indice_acciones: VectorIndex,
     indice_promociones: VectorIndex,
+    monetary_usd: float,
 ) -> dict:
+    """monetary_usd: monto REAL del caso (config.CASOS_PERFIL_CSV), usado
+    SOLO para la verificacion en codigo contra el hecho conocido -- nunca
+    se agrega al prompt del LLM (el Agente 2 sigue viendo unicamente
+    resumen_perfil, igual que antes)."""
     vector_consulta = embeber([resumen_perfil])[0]
 
     candidatas_acciones = [c for c, _score in indice_acciones.buscar(vector_consulta, TOP_K_ACCIONES)]
@@ -252,6 +309,7 @@ def agente2_verificador(
 
     accion_ganadora = max(aprobadas_acciones, key=lambda e: e.score) if aprobadas_acciones else None
     contradiccion_umbral = _detectar_contradiccion_umbral(evaluadas_acciones)
+    contradiccion_umbral_objetivo = _detectar_contradiccion_umbral_objetivo(evaluadas_acciones, monetary_usd)
 
     resultado: dict[str, Any] = {
         "theta": THETA_RELEVANCIA,
@@ -265,6 +323,7 @@ def agente2_verificador(
         "promocion_ganadora": None,
         "sin_opcion_viable": accion_ganadora is None,
         "contradiccion_umbral": contradiccion_umbral,
+        "contradiccion_umbral_objetivo": contradiccion_umbral_objetivo,
         "items_aprobados_para_agente3": [],
     }
 

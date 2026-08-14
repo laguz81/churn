@@ -80,9 +80,12 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
     traza.agente1 = salida_a1
     resumen_perfil = salida_a1["output"]["resumen_perfil"]
 
-    salida_a2 = agente2_verificador(resumen_perfil, indice_acciones, indice_promociones)
+    salida_a2 = agente2_verificador(
+        resumen_perfil, indice_acciones, indice_promociones, monetary_usd=caso["monetary_usd"]
+    )
     traza.agente2 = salida_a2
     contradiccion_umbral = salida_a2.get("contradiccion_umbral")
+    contradiccion_umbral_objetivo = salida_a2.get("contradiccion_umbral_objetivo")
 
     salida_a3 = agente3_sintetizador(salida_a2["items_aprobados_para_agente3"])
     traza.agente3 = salida_a3
@@ -128,11 +131,15 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
         # para revision manual (nunca se descarta el caso en silencio).
         revision_manual = True
 
-    if contradiccion_umbral:
+    if contradiccion_umbral or contradiccion_umbral_objetivo:
         # Agente 2 aprobo a la vez dos acciones cuyas condiciones de uso
-        # se excluyen mutuamente sobre el mismo umbral (ver agentes.py).
-        # El "ganador" que se uso para continuar el pipeline es solo un
-        # mejor esfuerzo; la fila se marca para revision manual sin
+        # se excluyen mutuamente sobre el mismo umbral (contradiccion_umbral,
+        # detectada en la propia respuesta del LLM), o aprobo una accion
+        # que contradice el monto REAL del caso, conocido en codigo, sin
+        # que hubiera empate ni contradiccion textual (contradiccion_umbral_
+        # objetivo -- ver agentes.py, caso real: id_caso 1 en la corrida del
+        # 2026-08-14). El "ganador" que se uso para continuar el pipeline es
+        # solo un mejor esfuerzo; la fila se marca para revision manual sin
         # importar que el formato de Agente 4 haya validado bien.
         revision_manual = True
 
@@ -160,6 +167,7 @@ def _procesar_caso(caso: dict, indice_acciones: VectorIndex, indice_promociones:
         "promociones_descartadas_por_umbral": salida_a2["promociones_descartadas"],
         "theta": salida_a2["theta"],
         "contradiccion_umbral_agente2": contradiccion_umbral,
+        "contradiccion_umbral_objetivo_agente2": contradiccion_umbral_objetivo,
     }
 
     return traza, fila_csv, entrada_log
