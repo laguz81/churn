@@ -202,6 +202,7 @@ def ver_caso(token: str, id_caso: int):
         viabilidad_anclas=VIABILIDAD_ANCLAS,
         errores=[],
         valores_previos={},
+        es_prueba=bool(info["es_prueba"]),
     )
 
 
@@ -266,6 +267,7 @@ def enviar_caso(token: str, id_caso: int):
                 viabilidad_anclas=VIABILIDAD_ANCLAS,
                 errores=errores,
                 valores_previos=request.form,
+                es_prueba=bool(info["es_prueba"]),
             ),
             400,
         )
@@ -300,7 +302,30 @@ def gracias(token: str):
     if siguiente is not None:
         return redirect(url_for("ver_caso", token=token, id_caso=siguiente, _external=True))
 
-    return render_template("gracias.html", total=len(casos_ids))
+    return render_template(
+        "gracias.html", token=token, total=len(casos_ids), es_prueba=bool(info["es_prueba"])
+    )
+
+
+@app.route("/e/<token>/reiniciar", methods=["POST"])
+def reiniciar_simulacion(token: str):
+    """Borra las respuestas de un token y lo manda de vuelta al caso 1.
+
+    SOLO funciona para tokens marcados es_prueba=True en evaluadores.json
+    (generados por preparar_evaluacion.py). Para un token de evaluador
+    real, esto responde 403 sin tocar la base -- las respuestas de un
+    evaluador real nunca deben poder borrarse desde la interfaz, o el
+    "no se puede recalificar un caso" dejaria de significar algo."""
+    info = _resolver_token(token)
+    if info is None:
+        abort(404)
+    if not info["es_prueba"]:
+        abort(403)
+
+    with db.connect(DB_PATH) as conn:
+        db.borrar_respuestas_token(conn, token)
+
+    return redirect(url_for("entrada", token=token, _external=True))
 
 
 if __name__ == "__main__":

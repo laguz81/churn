@@ -6,4 +6,11 @@
   <p>Calificaste los {{ total }} casos del panel. No es necesario hacer nada más.</p>
   <p>Puedes cerrar esta pestaña.</p>
 </div>
+
+{% if es_prueba %}
+<form method="post" action="{{ url_for('reiniciar_simulacion', token=token) }}" class="zona-prueba">
+  <p class="pregunta">Este enlace es de PRUEBA. El botón de abajo borra las respuestas de este token y vuelve al caso 1 — no existe para evaluadores reales.</p>
+  <button type="submit" class="reiniciar" onclick="return confirm('¿Borrar todas las respuestas de este token de prueba y volver al caso 1?');">Reiniciar simulación</button>
+</form>
+{% endif %}
 {% endblock %}

@@ -107,3 +107,13 @@ def insertar_respuesta(
     except sqlite3.IntegrityError:
         conn.rollback()
         return False
+
+
+def borrar_respuestas_token(conn: sqlite3.Connection, token: str) -> int:
+    """Borra todas las respuestas de un token. Usado solo por la ruta de
+    reinicio de simulacion (app.py), que a su vez solo la habilita para
+    tokens marcados es_prueba=True. No filtra por es_prueba aqui mismo
+    -- la app es responsable de no llamar esto para un token real."""
+    cur = conn.execute("DELETE FROM respuestas WHERE token = ?", (token,))
+    conn.commit()
+    return cur.rowcount
