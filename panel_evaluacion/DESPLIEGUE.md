@@ -7,6 +7,13 @@ Directorio en el servidor: `/opt/panel-evaluacion/` — sigue la misma
 convención que el resto de servicios del servidor (`/opt/<app>/docker-compose.yml`,
 ver `/opt/engram`, `/opt/n8n`, `/opt/platform-ia`).
 
+**Para publicar cambios, reiniciar o verificar salud, usar los scripts de
+`deploy/`** (`./deploy/publicar.sh`, `./deploy/reiniciar.sh`,
+`./deploy/health.sh` — ver `deploy/README.md`). El resto de este documento
+describe CÓMO se armó el despliegue la primera vez (para poder
+reproducirlo desde cero si hace falta); para el uso día a día no hace
+falta repetir estos pasos a mano.
+
 ## Estado del entorno del servidor (verificado antes de instalar nada)
 
 - Docker 29.5.3 / Compose v5.1.3 ya instalados.
