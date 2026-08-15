@@ -82,16 +82,35 @@ parte de la imagen.
 
 ## Reverse proxy + HTTPS para `churn-test.ecticsoft.com`
 
-**PENDIENTE — bloqueado en DNS.** Verificado desde el servidor: DNS de
-`churn-test.ecticsoft.com` devuelve `NXDOMAIN` (no configurado todavía).
-Let's Encrypt necesita que el DNS resuelva a este servidor antes de poder
-emitir el certificado (challenge HTTP-01). Configurar un registro A
-apuntando a `72.62.101.24` (la IP de `dev.ecticsoft`) antes de continuar
-con esta sección.
+**COMPLETADO 2026-08-14.**
 
-Config de nginx a crear en `/etc/nginx/sites-available/churn-test`
-(siguiendo el mismo patrón que los demás sitios del servidor), una vez el
-DNS resuelva:
+DNS: el servidor ya tenía un token de Cloudflare provisionado en
+`/etc/letsencrypt/cloudflare.ini` (para el plugin `certbot-dns-cloudflare`,
+instalado pero no usado aquí). Se verificó válido vía
+`GET /client/v4/user/tokens/verify` y se usó para crear el registro A
+directamente por API (`POST /zones/{zone_id}/dns_records`), sin necesidad
+de instalar un CLI dedicado:
+
+```bash
+ZONE=a01492ac1f7eb3d5fd6e49655262ebf4   # ecticsoft.com
+TOKEN=$(grep dns_cloudflare_api_token /etc/letsencrypt/cloudflare.ini | cut -d"=" -f2 | tr -d " ")
+curl -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  --data '{"type":"A","name":"churn-test.ecticsoft.com","content":"72.62.101.24","ttl":1,"proxied":true}'
+```
+
+`proxied: true` para igualar la convención de todos los demás subdominios
+del servidor (todos detrás del proxy de Cloudflare).
+
+Certificado: `certbot certonly --nginx -d churn-test.ecticsoft.com
+--non-interactive --agree-tos --cert-name churn-test.ecticsoft.com`,
+reutilizando la cuenta ACME ya registrada en el servidor. Funcionó pese
+al proxy de Cloudflare (mismo método `authenticator=nginx` que usan los
+certificados hermanos) — no hizo falta DNS-01 pese a tener el plugin
+disponible.
+
+Config de nginx en `/etc/nginx/sites-available/churn-test` (mismo patrón
+que los demás sitios del servidor):
 
 ```nginx
 server {
@@ -121,20 +140,26 @@ server {
 }
 ```
 
-Pasos, una vez el DNS resuelva:
+Nota de proceso: el primer intento de `certbot --nginx` se hizo con un
+bloque `server` que YA incluía `ssl_certificate` apuntando a un
+certificado que todavía no existía — nginx no habría podido levantar esa
+config. Se resolvió en dos pasos: (1) desplegar primero un bloque HTTP-only
+en el puerto 80 (sin sección `ssl`, solo el `proxy_pass`), recargar nginx,
+y RECIÉN ahí (2) correr `certbot certonly --nginx` (que usa ese bloque
+para el challenge) y desplegar la config HTTPS completa de arriba.
 
-```bash
-ln -s /etc/nginx/sites-available/churn-test /etc/nginx/sites-enabled/churn-test
-nginx -t                       # valida la config ANTES de tocar el 80 real
-certbot certonly --nginx -d churn-test.ecticsoft.com
-systemctl reload nginx
-```
+`app.py` ya usa `ProxyFix`, así que respeta `X-Forwarded-Proto`/
+`X-Forwarded-Host` sin configuración adicional — confirmado: los
+redirects de la app salen como `https://churn-test.ecticsoft.com/...`
+correctamente detrás del proxy.
 
-`app.py` ya usa `ProxyFix` (confirmado en el build original), así que
-respeta `X-Forwarded-Proto`/`X-Forwarded-Host` sin configuración
-adicional — los enlaces que genera la app (redirects) saldrán con
-`https://churn-test.ecticsoft.com/...` correctamente una vez detrás del
-proxy.
+Verificado end-to-end tras el despliegue de HTTPS: `curl` desde el
+servidor (OpenSSL, HTTP/2 vía Cloudflare) y navegación real en Chrome,
+ambos contra `https://churn-test.ecticsoft.com/e/<token>/`. Un error
+`schannel: CRYPT_E_NO_REVOCATION_CHECK` apareció solo en curl.exe de
+Windows (verificación de revocación de un certificado recién emitido) —
+no es un problema del servidor, descartado comparando contra curl del
+servidor y Chrome real, ambos exitosos.
 
 ## Verificación end-to-end realizada (2026-08-14, contra 127.0.0.1:8090 en el servidor, con el token de prueba)
 
@@ -156,11 +181,14 @@ proxy.
   (`WHERE es_prueba = 0`); no fue necesario borrar nada de la base para
   aislarlas, la exclusión ya es estructural.
 
-## Pendiente para cerrar el despliegue
+## Estado
 
-1. Usuario configura el registro DNS A de `churn-test.ecticsoft.com` →
-   `72.62.101.24`.
-2. Ejecutar la sección de nginx + certbot de arriba.
-3. Regenerar los tokens reales que se compartirán (ya hecho el
-   2026-08-14 con `--evaluadores 3`; si se vuelve a desplegar desde cero,
-   recordar copiar el `datos/` y `secreto/` resultantes, NO commitearlos).
+Despliegue completo. `https://churn-test.ecticsoft.com/e/<token>/` sirve
+el panel real para los 3 evaluadores + 1 token de prueba (generados el
+2026-08-14 con `--evaluadores 3`, semillas frescas — ver el log de esa
+corrida para los tokens exactos, no se repiten aquí).
+
+Si se vuelve a desplegar desde cero: los tokens/`datos/`/`secreto/` no
+están en git (por diseño, ver `.gitignore`); hay que regenerarlos con
+`preparar_evaluacion.py` y copiarlos al servidor de nuevo tal como se
+describe arriba.
