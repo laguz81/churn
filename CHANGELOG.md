@@ -1,10 +1,9 @@
 # Changelog
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
-Sin versionado semántico todavía (proyecto de titulación, no un paquete
-distribuido) — las entradas se agrupan por fecha.
+Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/),
+con [Versionado Semántico](https://semver.org/lang/es/) a partir de la 1.0.0.
 
-## [Sin publicar] — 2026-08-14
+## [1.0.0] — 2026-08-14
 
 ### Camino B — pipeline de 4 agentes
 
