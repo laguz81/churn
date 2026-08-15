@@ -17,4 +17,7 @@ panel_evaluacion/.venv/
 panel_evaluacion/__pycache__/
 panel_evaluacion/**/__pycache__/
 panel_evaluacion/*.pyc
+
+.codegraph/
+.atl/
 panel_evaluacion/**/*.pyc

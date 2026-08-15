@@ -150,11 +150,18 @@
     cursor: pointer;
   }
   button.reiniciar:hover { background: #fdecea; }
+  footer.version {
+    text-align: center;
+    color: #9aa0a6;
+    font-size: 0.75rem;
+    padding: 16px 0 8px;
+  }
 </style>
 </head>
 <body>
 <div class="contenedor">
 {% block contenido %}{% endblock %}
 </div>
+<footer class="version">v1.0.0</footer>
 </body>
 </html>
