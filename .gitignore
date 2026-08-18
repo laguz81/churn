@@ -21,3 +21,5 @@ panel_evaluacion/*.pyc
 .codegraph/
 .atl/
 panel_evaluacion/**/*.pyc
+
+panel_evaluacion/secreto/
