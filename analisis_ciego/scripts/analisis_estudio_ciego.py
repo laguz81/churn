@@ -18,10 +18,11 @@ Reglas de contenido para resultados_resumen.md (instruccion del usuario):
   - Formulacion aprobada para el resultado nulo de PASO 5 (ya usada
     tal cual, sin parafrasear)."""
 import csv
+import hashlib
 import json
 import re
 from collections import Counter, defaultdict
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -34,15 +35,27 @@ from scipy.stats import wilcoxon
 ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = ROOT.parent
 CALIF = ROOT / "calificaciones.csv"
+COMENTARIOS = ROOT / "comentarios.csv"
 DECODE = ROOT / "decode.json"
 EVALUADORES = REPO_ROOT / "panel_evaluacion" / "datos" / "evaluadores.json"
 DECISIONES_MD = ROOT / "decisiones_analisis.md"
 CEGADO_MD = ROOT / "clasificacion_cegado.md"
 
+
+def sha256_de(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+FECHA_HORA_UTC_CORRIDA = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
 CRITERIOS = ("relevancia", "viabilidad")
 CASOS = list(range(1, 16))
 FECHA = date.today().strftime("%Y%m%d")
 XLSX_OUT = ROOT / f"Respaldo_Estudio_Ciego_{FECHA}.xlsx"
+_previos = sorted(
+    p.name for p in ROOT.glob("Respaldo_Estudio_Ciego_*.xlsx") if p != XLSX_OUT
+)
+REEMPLAZA_A = _previos[-1] if _previos else "N/A (primer respaldo)"
 MD_OUT = ROOT / "resultados_resumen.md"
 
 FORMULACION_NULO_APROBADA = (
@@ -383,6 +396,14 @@ meta = [
     ("Margen TOST", f"±{str(MARGEN_TOST).replace('.', ',')} puntos Likert"),
     ("n casos", "15"),
     ("n evaluadores", "3"),
+    ("Archivo de calificaciones", CALIF.name),
+    ("SHA-256 calificaciones", sha256_de(CALIF)),
+    ("Archivo de comentarios", COMENTARIOS.name),
+    ("SHA-256 comentarios", sha256_de(COMENTARIOS)),
+    ("Archivo de decodificación", DECODE.name),
+    ("SHA-256 decode", sha256_de(DECODE)),
+    ("Fecha y hora UTC de la corrida", FECHA_HORA_UTC_CORRIDA),
+    ("Reemplaza a", REEMPLAZA_A),
 ]
 for i, (k, v) in enumerate(meta, start=3):
     ws.cell(row=i, column=1, value=k)
@@ -477,6 +498,36 @@ nueva_hoja(
     ["criterio", "p_H01", "H01_rechazada(no_inferior)", "p_H02", "H02_rechazada(no_superior)",
      "equivalencia_via1", "mediana_diff", "ic90_lo", "ic90_hi", "equivalencia_via2"],
     filas7,
+)
+
+# --- 08_Figuras ---
+SCRIPT_FIGURAS = "articulo/generar_figuras.py"
+CAMINO_A_XLSX = "Respaldo_Calculos_v18m_20260811.xlsx"
+FIGURAS_DIR = REPO_ROOT / "articulo" / "figuras"
+
+
+def _fecha_figura(nombre_png: str) -> str:
+    ruta = FIGURAS_DIR / nombre_png
+    return date.fromtimestamp(ruta.stat().st_mtime).isoformat()
+
+
+filas8 = [
+    ["Figura 1", "figura1_frontera.png",
+     f"11_Comparacion_Reglas ({CAMINO_A_XLSX}, respaldo de Camino A)",
+     SCRIPT_FIGURAS, _fecha_figura("figura1_frontera.png")],
+    ["Figura 2", "figura2_segmentos.png",
+     f"13b_Desglose_TP_FP_Segmento ({CAMINO_A_XLSX}, respaldo de Camino A)",
+     SCRIPT_FIGURAS, _fecha_figura("figura2_segmentos.png")],
+    ["Figura 3", "figura3_diferencias.png",
+     "03_Tabla_Pareada (este respaldo)",
+     SCRIPT_FIGURAS, _fecha_figura("figura3_diferencias.png")],
+]
+nueva_hoja(
+    "08_Figuras",
+    "Trazabilidad de las figuras del artículo. Figuras 1 y 2 provienen del respaldo de "
+    "Camino A; Figura 3 (diferencias pareadas) proviene de este respaldo.",
+    ["figura", "archivo", "hoja de origen", "script", "fecha"],
+    filas8,
 )
 
 wb.save(XLSX_OUT)
