@@ -28,3 +28,4 @@ panel_evaluacion/secreto/
 
 analisis_ciego/*
 !analisis_ciego/decisiones_analisis.md
+!analisis_ciego/clasificacion_cegado.md
