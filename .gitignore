@@ -25,3 +25,6 @@ panel_evaluacion/**/*.pyc
 panel_evaluacion/secreto/
 
 panel_evaluacion/secreto/
+
+analisis_ciego/*
+!analisis_ciego/decisiones_analisis.md
