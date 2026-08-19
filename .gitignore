@@ -23,3 +23,5 @@ panel_evaluacion/*.pyc
 panel_evaluacion/**/*.pyc
 
 panel_evaluacion/secreto/
+
+panel_evaluacion/secreto/
