@@ -15,3 +15,12 @@ MARGEN_TOST      = 0,5 puntos Likert
 SEMILLA          = 42
 
 # Estas ocho decisiones no se modifican después de ver ningún resultado.
+
+# --- Decisión añadida con posterioridad (17/08/2026, tras ver PASO 5) ---
+ALFA             = 0,05                 # no estaba fijado arriba; se fija ahora
+                                        # para PASO 7 (TOST). La conclusión del
+                                        # PASO 5 (Wilcoxon no detectó diferencia)
+                                        # es invariante a cualquier alfa
+                                        # convencional (0,01 / 0,05 / 0,10):
+                                        # p=0,197 (relevancia) y p=0,603
+                                        # (viabilidad) superan los tres.
