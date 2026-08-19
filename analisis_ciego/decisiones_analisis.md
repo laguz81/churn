@@ -1,4 +1,3 @@
-@'
 # Decisiones de análisis — estudio ciego
 # Congeladas el: 17/08/2026
 # Firmado: Luis Guzmán, Alex Ibarra
@@ -16,4 +15,3 @@ MARGEN_TOST      = 0,5 puntos Likert
 SEMILLA          = 42
 
 # Estas ocho decisiones no se modifican después de ver ningún resultado.
-'@ | Set-Content -Encoding UTF8 C:\ecticsoft\churn\analisis_ciego\decisiones_analisis.md
