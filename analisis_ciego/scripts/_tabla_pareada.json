@@ -1,0 +1,107 @@
+[
+  {
+    "caso": 1,
+    "sistema_relevancia": 4.0,
+    "sistema_viabilidad": 3.6666666666666665,
+    "eh2_relevancia": 4.0,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 2,
+    "sistema_relevancia": 3.0,
+    "sistema_viabilidad": 3.0,
+    "eh2_relevancia": 3.0,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 3,
+    "sistema_relevancia": 4.666666666666667,
+    "sistema_viabilidad": 4.666666666666667,
+    "eh2_relevancia": 4.333333333333333,
+    "eh2_viabilidad": 4.333333333333333
+  },
+  {
+    "caso": 4,
+    "sistema_relevancia": 4.333333333333333,
+    "sistema_viabilidad": 4.333333333333333,
+    "eh2_relevancia": 4.333333333333333,
+    "eh2_viabilidad": 4.333333333333333
+  },
+  {
+    "caso": 5,
+    "sistema_relevancia": 2.6666666666666665,
+    "sistema_viabilidad": 3.3333333333333335,
+    "eh2_relevancia": 3.3333333333333335,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 6,
+    "sistema_relevancia": 4.0,
+    "sistema_viabilidad": 4.0,
+    "eh2_relevancia": 2.6666666666666665,
+    "eh2_viabilidad": 4.0
+  },
+  {
+    "caso": 7,
+    "sistema_relevancia": 4.666666666666667,
+    "sistema_viabilidad": 4.666666666666667,
+    "eh2_relevancia": 3.3333333333333335,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 8,
+    "sistema_relevancia": 4.0,
+    "sistema_viabilidad": 4.0,
+    "eh2_relevancia": 3.3333333333333335,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 9,
+    "sistema_relevancia": 3.3333333333333335,
+    "sistema_viabilidad": 3.0,
+    "eh2_relevancia": 3.6666666666666665,
+    "eh2_viabilidad": 3.0
+  },
+  {
+    "caso": 10,
+    "sistema_relevancia": 3.3333333333333335,
+    "sistema_viabilidad": 3.3333333333333335,
+    "eh2_relevancia": 1.6666666666666667,
+    "eh2_viabilidad": 1.3333333333333333
+  },
+  {
+    "caso": 11,
+    "sistema_relevancia": 3.3333333333333335,
+    "sistema_viabilidad": 4.0,
+    "eh2_relevancia": 2.0,
+    "eh2_viabilidad": 2.3333333333333335
+  },
+  {
+    "caso": 12,
+    "sistema_relevancia": 3.0,
+    "sistema_viabilidad": 3.0,
+    "eh2_relevancia": 3.6666666666666665,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 13,
+    "sistema_relevancia": 4.0,
+    "sistema_viabilidad": 3.6666666666666665,
+    "eh2_relevancia": 3.0,
+    "eh2_viabilidad": 3.0
+  },
+  {
+    "caso": 14,
+    "sistema_relevancia": 3.0,
+    "sistema_viabilidad": 3.0,
+    "eh2_relevancia": 3.3333333333333335,
+    "eh2_viabilidad": 3.6666666666666665
+  },
+  {
+    "caso": 15,
+    "sistema_relevancia": 3.0,
+    "sistema_viabilidad": 3.0,
+    "eh2_relevancia": 3.3333333333333335,
+    "eh2_viabilidad": 3.6666666666666665
+  }
+]
