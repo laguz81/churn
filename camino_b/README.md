@@ -155,13 +155,18 @@ correr el pipeline en produccion**; si fue deprecado, fijar
   proyecto (solo en comentarios/documentacion, como recordatorio).
 - `corpus.py` nunca hace `os.listdir`/glob sobre `corpus_1/`: toda
   lectura pasa por la whitelist explicita `config.CORPUS_WHITELIST`.
-- **No se ejecuto el pipeline end-to-end sobre los 15 casos reales.**
-  `pipeline.py` esta completo y listo para correr, pero la generacion
-  real esta pausada hasta que se resuelva una pregunta de politica de
-  negocio pendiente (indicacion explicita del usuario). Los unicos
-  smoke tests que se corrieron son los del indexador (con el corpus
-  real, sin LLM) y los del validador (con ejemplos sinteticos
-  inventados, no derivados de `casos_15_expertos.csv`).
+- **El pipeline se ejecuto end-to-end sobre los 15 casos reales**, en la
+  corrida `resultados/run1_definitiva/`. Las salidas de esa corrida
+  (`recomendaciones_ia.csv`) alimentaron el estudio ciego pareado,
+  evaluado externamente por 3 evaluadores (ver `../analisis_ciego/` en
+  la raiz del repo). De los 15 casos, 3 quedaron marcados
+  `revision_manual=True` -- bandera que el codigo activa cuando el
+  Agente 4 agota los reintentos de validacion de formato, o cuando el
+  Agente 2 aprueba dos acciones cuyas condiciones se excluyen
+  mutuamente sobre el mismo umbral (ver `agentes.py` y `pipeline.py`,
+  funcion `_procesar_caso`) -- y **se conservan sin corregir
+  manualmente**: el CSV y las trazas de esos 3 casos son la salida
+  cruda del pipeline, igual que el resto.
 
 ## Instalacion y smoke tests
 
